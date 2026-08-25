@@ -50,6 +50,10 @@ Revisi fitur dari dokumen `dokumentasi-fitur-tambahan-SIGULA.pdf`.
 - **Cetak thermal 58mm** untuk kwitansi pembelian dan slip gaji.
 - **Endpoint versi publik** `GET /api/v1/versi` + popup pengingat pembaruan di frontend.
 - **Versi aplikasi tampil di sidebar** supaya mudah memastikan pengguna sudah update.
+- **Data operasional client** lewat `DataClientSeeder`: 195 petani Desa Batuanten
+  (beserta kode lahan, RT/RW, dan status penderesnya), 5 pengepul, dan 33 karyawan
+  pemasak. CSV sumbernya disimpan di `backend/database/data/petani-batuanten.csv`.
+  Idempoten — menjalankan ulang memperbarui, tidak menggandakan.
 - **Perintah impor petani** `php artisan sigula:impor-petani <file.csv>` — header dan
   pemisah dideteksi otomatis, status kombinasi (`PMS + PLMR`) dipecah sendiri, dan
   menjalankan ulang memperbarui data alih-alih menggandakannya (`--uji-coba` untuk

@@ -265,6 +265,50 @@ tail -30 /var/log/nginx/sigula.nirasarimurni.com-error.log
 
 ---
 
+## Bagian D2 — Mengisi data operasional client
+
+Rilis ini membawa data asli yang dikirim client: **195 petani** Desa Batuanten
+(lengkap dengan kode lahan, RT/RW, status penderes), **5 pengepul**, dan
+**33 karyawan pemasak**.
+
+Server saat ini masih berisi data contoh dari `MasterSeeder` (petani dan karyawan
+bernama Sukirman, Asep Saepudin, dan seterusnya). Periksa dulu isinya:
+
+```bash
+cd /var/www/api.nirasarimurni.com/backend
+php artisan tinker --execute="
+  echo 'petani   : '.\App\Models\Petani::count().\"\n\";
+  echo 'karyawan : '.\App\Models\Karyawan::count().\"\n\";
+  echo 'pembelian: '.\App\Models\Pembelian::count().\"\n\";
+  echo 'sesi     : '.\App\Models\SesiTungku::count().\"\n\";
+"
+```
+
+### Pilihan 1 — tambahkan saja (tidak menghapus apa pun)
+
+```bash
+php artisan db:seed --class=DataClientSeeder --force
+```
+
+Data contoh tetap ada berdampingan dengan data asli; hapus satu per satu lewat menu
+Petani/Master di aplikasi kalau mengganggu.
+
+### Pilihan 2 — mulai dari bersih
+
+Hanya bila transaksi yang ada memang cuma uji coba. **Menghapus seluruh isi database**,
+termasuk mereset password ketiga akun ke `SIGULA_DEFAULT_PASSWORD`:
+
+```bash
+php artisan sigula:backup-db          # backup lagi tepat sebelum menghapus
+php artisan migrate:fresh --seed --force
+php artisan optimize
+```
+
+Pastikan `SIGULA_SEED_DEMO=false` ada di `.env` server, kalau tidak transaksi demo
+±6 bulan ikut dibuat.
+
+---
+
 ## Bagian E — Env opsional
 
 Semua punya nilai default, jadi tidak wajib diisi. Tambahkan ke

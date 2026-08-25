@@ -239,6 +239,16 @@ dideteksi sendiri. Kolom status boleh berisi kombinasi seperti `PMS + PLMR`.
 Perintahnya idempoten: baris dicocokkan lewat `kode lahan` (atau nama bila kosong),
 jadi menjalankan ulang memperbarui data, bukan menggandakannya.
 
+Data client yang sudah diserahkan (195 petani Batuanten, 5 pengepul, 33 karyawan
+pemasak) sudah tersimpan di repo dan bisa dimasukkan sekaligus:
+
+```bash
+php artisan db:seed --class=DataClientSeeder --force
+```
+
+Semua petani dari CSV itu berstatus **Non-Member** karena dokumen aslinya tidak
+mencantumkan nomor member; ubah lewat menu Petani bila memang ada yang member.
+
 ---
 
 ## 3b. Pengepul

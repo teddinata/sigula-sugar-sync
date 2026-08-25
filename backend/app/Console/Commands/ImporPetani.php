@@ -35,7 +35,7 @@ class ImporPetani extends Command
         'nama' => ['nama', 'nama petani', 'nama_petani', 'petani'],
         'kode_lahan' => ['kode lahan', 'kode_lahan', 'kodelahan', 'kode', 'no lahan'],
         'rt_rw' => ['rt/rw', 'rt rw', 'rt_rw', 'rtrw'],
-        'status_penderes' => ['status', 'status penderes', 'status_penderes', 'jenis', 'keterangan'],
+        'status_penderes' => ['status', 'status penderes', 'status_penderes', 'jenis'],
         'nomor_member' => ['nomor member', 'no member', 'nomor_member', 'no'],
         'kontak' => ['kontak', 'hp', 'no hp', 'telepon', 'wa'],
         'alamat' => ['alamat', 'desa', 'dusun'],

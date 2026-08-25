@@ -12,6 +12,11 @@ class DatabaseSeeder extends Seeder
     {
         $this->call([
             UserSeeder::class,
+            // Data asli client (195 petani Batuanten, 5 pengepul, 33 karyawan).
+            // Dijalankan SEBELUM MasterSeeder: MasterSeeder melewati petani dan
+            // karyawan contoh bila tabelnya sudah terisi, jadi data sungguhan
+            // tidak tercampur dengan data pengembangan.
+            DataClientSeeder::class,
             MasterSeeder::class,
         ]);
 
