@@ -27,6 +27,15 @@ class PembelianResource extends JsonResource
             'kg' => (float) $this->kilogram,
             'harga' => (float) $this->harga_per_kg,
             'total' => (float) $this->total,
+            // Nilai kg x harga sebelum dibulatkan ke kelipatan 500/1.000.
+            'totalSebelumBulat' => $this->total_sebelum_bulat === null
+                ? null
+                : (float) $this->total_sebelum_bulat,
+            'pengepulId' => $this->pengepul_id === null ? null : (string) $this->pengepul_id,
+            'pengepul' => $this->whenLoaded('pengepul', fn () => $this->pengepul === null ? null : [
+                'id' => (string) $this->pengepul->id,
+                'nama' => $this->pengepul->nama,
+            ], null),
             'statusPembayaran' => $this->status_pembayaran->label(),
             'statusPembayaranKode' => $this->status_pembayaran->value,
             'catatan' => $this->catatan,

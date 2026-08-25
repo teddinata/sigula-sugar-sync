@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Enums\StatusPenderes;
 use App\Enums\StatusPetani;
 use App\Exceptions\BusinessRuleException;
 use App\Models\Eksportir;
 use App\Models\Karyawan;
 use App\Models\Penjualan;
+use App\Models\Pengepul;
 use App\Models\Petani;
 use App\Models\ProduksiKaryawan;
 use App\Models\SesiTungku;
@@ -27,10 +29,11 @@ final class MasterDataService
     {
         return DB::transaction(function () use ($data, $user): Petani {
             $petani = Petani::create($this->atributPetani($data));
+            $this->sinkronStatusPenderes($petani, $data['status_penderes'] ?? []);
 
             $this->audit->catat('petani.simpan', sprintf('Petani %s ditambahkan', $petani->nama), $petani, [], $user);
 
-            return $petani;
+            return $petani->load('statusPenderes');
         });
     }
 
@@ -41,6 +44,10 @@ final class MasterDataService
             $sebelum = $petani->only(['nama', 'status', 'nomor_member', 'kontak', 'alamat']);
             $petani->update($this->atributPetani($data, $petani));
 
+            if (array_key_exists('status_penderes', $data)) {
+                $this->sinkronStatusPenderes($petani, $data['status_penderes']);
+            }
+
             $this->audit->catat(
                 'petani.ubah',
                 sprintf('Data petani %s diperbarui', $petani->nama),
@@ -49,7 +56,7 @@ final class MasterDataService
                 $user,
             );
 
-            return $petani->refresh();
+            return $petani->refresh()->load('statusPenderes');
         });
     }
 
@@ -170,6 +177,86 @@ final class MasterDataService
     }
 
     /**
+     * Menyelaraskan daftar status penderes seorang petani.
+     *
+     * @param  array<int, StatusPenderes>  $status
+     */
+    private function sinkronStatusPenderes(Petani $petani, array $status): void
+    {
+        $kode = array_values(array_unique(array_map(
+            static fn (StatusPenderes $s): string => $s->value,
+            $status,
+        )));
+
+        $petani->statusPenderes()->whereNotIn('kode', $kode ?: ['-'])->delete();
+
+        // pluck() ikut melewati cast, jadi hasilnya enum — disamakan ke string dulu.
+        $sudahAda = $petani->statusPenderes()
+            ->pluck('kode')
+            ->map(static fn (StatusPenderes $s): string => $s->value)
+            ->all();
+
+        foreach (array_diff($kode, $sudahAda) as $baru) {
+            $petani->statusPenderes()->create(['kode' => $baru]);
+        }
+
+        $petani->unsetRelation('statusPenderes');
+    }
+
+    /** @param array{nama: string, kontak?: string|null, alamat?: string|null, aktif?: bool} $data */
+    public function simpanPengepul(array $data, ?User $user = null): Pengepul
+    {
+        return DB::transaction(function () use ($data, $user): Pengepul {
+            $pengepul = Pengepul::create([
+                'nama' => $data['nama'],
+                'kontak' => $data['kontak'] ?? null,
+                'alamat' => $data['alamat'] ?? null,
+                'aktif' => $data['aktif'] ?? true,
+            ]);
+
+            $this->audit->catat('pengepul.simpan', sprintf('Pengepul %s ditambahkan', $pengepul->nama), $pengepul, [], $user);
+
+            return $pengepul;
+        });
+    }
+
+    /** @param array<string, mixed> $data */
+    public function ubahPengepul(Pengepul $pengepul, array $data, ?User $user = null): Pengepul
+    {
+        return DB::transaction(function () use ($pengepul, $data, $user): Pengepul {
+            $pengepul->update($data);
+
+            $this->audit->catat('pengepul.ubah', sprintf('Data pengepul %s diperbarui', $pengepul->nama), $pengepul, [], $user);
+
+            return $pengepul->refresh();
+        });
+    }
+
+    /** Pengepul yang sudah dipakai transaksi dinonaktifkan, bukan dihapus. */
+    public function hapusPengepul(Pengepul $pengepul, ?User $user = null): string
+    {
+        $dipakai = $pengepul->pembelian()->exists();
+
+        return DB::transaction(function () use ($pengepul, $user, $dipakai): string {
+            if ($dipakai) {
+                $pengepul->update(['aktif' => false]);
+                $this->audit->catat(
+                    'pengepul.nonaktif',
+                    sprintf('Pengepul %s dinonaktifkan (punya riwayat transaksi)', $pengepul->nama),
+                    $pengepul, [], $user,
+                );
+
+                return 'nonaktif';
+            }
+
+            $this->audit->catat('pengepul.hapus', sprintf('Pengepul %s dihapus', $pengepul->nama), $pengepul, [], $user);
+            $pengepul->delete();
+
+            return 'hapus';
+        });
+    }
+
+    /**
      * Nomor member 3 digit berikutnya. Dipanggil di dalam transaction dan
      * dilindungi unique index pada kolom nomor_member.
      */
@@ -213,6 +300,8 @@ final class MasterDataService
             'status' => $status->value,
             'nomor_member' => $nomor,
             'kontak' => $data['kontak'] ?? null,
+            'kode_lahan' => $data['kode_lahan'] ?? null,
+            'rt_rw' => $data['rt_rw'] ?? null,
             'alamat' => $data['alamat'] ?? null,
         ];
     }

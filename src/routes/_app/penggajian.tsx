@@ -15,6 +15,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { PrintDialog, PrintRow } from "@/components/sigula/print-dialog";
+import { BarisThermal, GarisThermal, JudulThermal } from "@/components/sigula/thermal-print";
 import {
   DataTable,
   EmptyState,
@@ -376,6 +377,35 @@ function PenggajianPage() {
         open={slipKaryawanId !== null}
         onOpenChange={(v) => !v && setSlipKaryawanId(null)}
         title="Slip Gaji Karyawan"
+        thermal={
+          slip && (
+            <>
+              <JudulThermal judul="PT Nira Sari Murni" subjudul="Slip Gaji Mingguan" />
+              <GarisThermal />
+              <BarisThermal label="Nama" value={slip.baris.nama} />
+              <BarisThermal label="Periode" value={slip.periode.label} />
+              <BarisThermal label="Hari kerja" value={`${slip.baris.hariKerja} hari`} />
+              <GarisThermal />
+              <BarisThermal
+                label={`Kristal ${angka(slip.baris.kgKristal, 1)} kg`}
+                value={rupiah(slip.baris.upahKristal)}
+              />
+              <BarisThermal
+                label={`Brondol ${angka(slip.baris.kgBrondol, 1)} kg`}
+                value={rupiah(slip.baris.upahBrondol)}
+              />
+              <BarisThermal label="Uang makan" value={rupiah(slip.baris.uangMakan)} />
+              {slip.baris.totalSebelumBulat !== slip.baris.total && (
+                <BarisThermal label="Subtotal" value={rupiah(slip.baris.totalSebelumBulat)} />
+              )}
+              <GarisThermal />
+              <BarisThermal label="TOTAL" value={rupiah(slip.baris.total)} tebal />
+              <BarisThermal label="Status" value={slip.baris.dibayar ? "DIBAYAR" : "BELUM"} />
+              <GarisThermal />
+              <p className="mt-1 text-center text-[10px]">Terima kasih</p>
+            </>
+          )
+        }
       >
         {slipLoading ? (
           <div className="flex items-center justify-center gap-2 py-8 text-sm text-muted-foreground">
@@ -405,6 +435,12 @@ function PenggajianPage() {
                 />
               </div>
               <div className="mt-2 border-t pt-2">
+                {slip.baris.totalSebelumBulat !== slip.baris.total && (
+                  <PrintRow
+                    label="Subtotal (sebelum pembulatan)"
+                    value={rupiah(slip.baris.totalSebelumBulat)}
+                  />
+                )}
                 <PrintRow label="Total gaji" value={rupiah(slip.baris.total)} strong />
                 <PrintRow
                   label="Status"

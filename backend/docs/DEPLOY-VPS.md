@@ -1,5 +1,8 @@
 # SIGULA Deployment
 
+> **Sudah pernah deploy?** Panduan ini untuk setup server dari nol. Untuk memasang
+> rilis baru di server yang sudah jalan, pakai [`RILIS-1.1.0.md`](RILIS-1.1.0.md).
+
 Panduan deploy backend SIGULA ke VPS, mengikuti alur **BWAStore Deployment** tapi
 sudah disesuaikan dengan Laravel 13. Jalankan perintahnya satu per satu dari atas
 ke bawah.

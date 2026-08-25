@@ -19,6 +19,8 @@ export interface BarisGaji {
   upahKristal: number;
   upahBrondol: number;
   uangMakan: number;
+  /** Hasil hitungan sebelum dibulatkan ke kelipatan 500. */
+  totalSebelumBulat: number;
   total: number;
   dibayar: boolean;
   dibayarPada: string | null;

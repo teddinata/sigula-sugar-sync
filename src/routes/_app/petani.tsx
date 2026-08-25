@@ -31,7 +31,13 @@ import {
 } from "@/components/sigula/ui-bits";
 import { angka, rupiah } from "@/lib/format";
 import { ApiError } from "@/lib/api-client";
-import type { Petani, PetaniPayload } from "@/lib/api/petani";
+import {
+  DAFTAR_STATUS_PENDERES,
+  type Petani,
+  type PetaniPayload,
+  type StatusPenderesKode,
+} from "@/lib/api/petani";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useHapusPetani, usePetaniList, useTambahPetani, useUbahPetani } from "@/hooks/use-petani";
 
 export const Route = createFileRoute("/_app/petani")({
@@ -58,6 +64,10 @@ interface FormState {
   status: "Member" | "Non-Member";
   kontak: string;
   alamat: string;
+  /** Satu petani bisa punya lebih dari satu status, mis. PMS + PLMD. */
+  statusPenderes: StatusPenderesKode[];
+  kodeLahan: string;
+  rtRw: string;
 }
 
 const emptyForm: FormState = {
@@ -65,6 +75,9 @@ const emptyForm: FormState = {
   status: "Member",
   kontak: "",
   alamat: "",
+  statusPenderes: [],
+  kodeLahan: "",
+  rtRw: "",
 };
 
 function apiErrorMessage(err: unknown, fallback: string): string {
@@ -88,7 +101,17 @@ function PetaniPage() {
     return () => clearTimeout(t);
   }, [q]);
 
-  const { data: rows = [], isLoading, isError } = usePetaniList({ q: qDebounced || undefined });
+  // Filter status penderes: kosong = tampilkan semua.
+  const [fStatusPenderes, setFStatusPenderes] = useState<StatusPenderesKode[]>([]);
+
+  const {
+    data: rows = [],
+    isLoading,
+    isError,
+  } = usePetaniList({
+    q: qDebounced || undefined,
+    statusPenderes: fStatusPenderes.length > 0 ? fStatusPenderes : undefined,
+  });
   const tambahPetani = useTambahPetani();
   const ubahPetani = useUbahPetani();
   const hapusPetani = useHapusPetani();
@@ -107,7 +130,15 @@ function PetaniPage() {
 
   const openEdit = (p: Petani) => {
     setEditing(p);
-    setForm({ nama: p.nama, status: p.status, kontak: p.kontak, alamat: p.alamat });
+    setForm({
+      nama: p.nama,
+      status: p.status,
+      kontak: p.kontak,
+      alamat: p.alamat,
+      statusPenderes: (p.statusPenderes ?? []).map((s) => s.kode),
+      kodeLahan: p.kodeLahan ?? "",
+      rtRw: p.rtRw ?? "",
+    });
     setErr(null);
     setOpen(true);
   };
@@ -119,6 +150,10 @@ function PetaniPage() {
       status: form.status,
       kontak: form.kontak.trim() || undefined,
       alamat: form.alamat.trim() || undefined,
+      // Selalu dikirim (walau kosong) supaya status yang dilepas ikut terhapus.
+      statusPenderes: form.statusPenderes,
+      kodeLahan: form.kodeLahan.trim() || undefined,
+      rtRw: form.rtRw.trim() || undefined,
     };
     try {
       if (editing) {
@@ -147,6 +182,19 @@ function PetaniPage() {
 
   const saving = tambahPetani.isPending || ubahPetani.isPending;
 
+  const toggleStatusForm = (kode: StatusPenderesKode) =>
+    setForm((f) => ({
+      ...f,
+      statusPenderes: f.statusPenderes.includes(kode)
+        ? f.statusPenderes.filter((k) => k !== kode)
+        : [...f.statusPenderes, kode],
+    }));
+
+  const toggleStatusFilter = (kode: StatusPenderesKode) =>
+    setFStatusPenderes((daftar) =>
+      daftar.includes(kode) ? daftar.filter((k) => k !== kode) : [...daftar, kode],
+    );
+
   const cols: Column<Petani>[] = [
     {
       key: "nama",
@@ -170,6 +218,32 @@ function PetaniPage() {
       header: "Nomor Member",
       cell: (r) =>
         r.labelMember ? r.labelMember : <span className="text-muted-foreground">—</span>,
+    },
+    {
+      key: "penderes",
+      header: "Status Penderes",
+      cell: (r) =>
+        r.statusPenderes && r.statusPenderes.length > 0 ? (
+          <div className="flex flex-wrap gap-1">
+            {r.statusPenderes.map((s) => (
+              <Badge key={s.kode} variant="outline" title={s.keterangan}>
+                {s.label}
+              </Badge>
+            ))}
+          </div>
+        ) : (
+          <span className="text-muted-foreground">—</span>
+        ),
+    },
+    {
+      key: "lahan",
+      header: "Kode Lahan",
+      cell: (r) => (
+        <div className="text-xs">
+          <p>{r.kodeLahan || "—"}</p>
+          {r.rtRw && <p className="text-muted-foreground">RT/RW {r.rtRw}</p>}
+        </div>
+      ),
     },
     { key: "kontak", header: "Kontak", cell: (r) => r.kontak || "-" },
     {
@@ -218,7 +292,7 @@ function PetaniPage() {
                 <Plus className="mr-2 size-4" /> Tambah Petani
               </Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>{editing ? "Ubah Data Petani" : "Tambah Petani"}</DialogTitle>
               </DialogHeader>
@@ -268,6 +342,26 @@ function PetaniPage() {
                     placeholder="0812-3456-7890"
                   />
                 </div>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="kodeLahan">Kode Lahan</Label>
+                    <Input
+                      id="kodeLahan"
+                      value={form.kodeLahan}
+                      onChange={(e) => setForm({ ...form, kodeLahan: e.target.value })}
+                      placeholder="Contoh: BTN-014"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="rtRw">RT/RW</Label>
+                    <Input
+                      id="rtRw"
+                      value={form.rtRw}
+                      onChange={(e) => setForm({ ...form, rtRw: e.target.value })}
+                      placeholder="02/05"
+                    />
+                  </div>
+                </div>
                 <div className="space-y-2">
                   <Label htmlFor="alamat">Alamat</Label>
                   <Input
@@ -276,6 +370,34 @@ function PetaniPage() {
                     onChange={(e) => setForm({ ...form, alamat: e.target.value })}
                     placeholder="Desa, Kecamatan"
                   />
+                </div>
+                <div className="space-y-2">
+                  <Label>Status Penderes / Pemilik Lahan</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Boleh lebih dari satu, mis. PMS + PLMD.
+                  </p>
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    {DAFTAR_STATUS_PENDERES.map((s) => (
+                      <label
+                        key={s.kode}
+                        htmlFor={`status-${s.kode}`}
+                        className="flex cursor-pointer items-start gap-2 rounded-lg border p-2 text-sm hover:bg-accent"
+                      >
+                        <Checkbox
+                          id={`status-${s.kode}`}
+                          checked={form.statusPenderes.includes(s.kode)}
+                          onCheckedChange={() => toggleStatusForm(s.kode)}
+                          className="mt-0.5"
+                        />
+                        <span className="min-w-0">
+                          <span className="font-medium">{s.label}</span>
+                          <span className="block text-xs text-muted-foreground">
+                            {s.keterangan}
+                          </span>
+                        </span>
+                      </label>
+                    ))}
+                  </div>
                 </div>
                 {err && <p className="text-sm text-destructive">{err}</p>}
               </div>
@@ -295,12 +417,42 @@ function PetaniPage() {
 
       <Card className="overflow-hidden shadow-card">
         <CardContent className="space-y-4 px-0 py-4">
-          <div className="px-4">
+          <div className="space-y-3 px-4">
             <SearchInput
               value={q}
               onChange={setQ}
               placeholder="Cari nama, nomor member, atau kontak..."
             />
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="mr-1 text-xs text-muted-foreground">Status penderes:</span>
+              {DAFTAR_STATUS_PENDERES.map((s) => {
+                const aktif = fStatusPenderes.includes(s.kode);
+                return (
+                  <Button
+                    key={s.kode}
+                    type="button"
+                    size="sm"
+                    variant={aktif ? "default" : "outline"}
+                    className="h-7 px-2 text-xs"
+                    title={s.keterangan}
+                    onClick={() => toggleStatusFilter(s.kode)}
+                  >
+                    {s.label}
+                  </Button>
+                );
+              })}
+              {fStatusPenderes.length > 0 && (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  className="h-7 px-2 text-xs"
+                  onClick={() => setFStatusPenderes([])}
+                >
+                  Reset
+                </Button>
+              )}
+            </div>
           </div>
           {isError && (
             <p className="px-4 text-sm text-destructive">

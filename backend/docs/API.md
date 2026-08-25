@@ -2,14 +2,12 @@
 
 > Ingin langsung mencoba? Import [`SIGULA.postman_collection.json`](SIGULA.postman_collection.json)
 > + [`SIGULA.postman_environment.json`](SIGULA.postman_environment.json) ke Postman —
-> seluruh 58 endpoint di dokumen ini sudah tersedia sebagai request siap jalan, lengkap
+> seluruh 63 endpoint di dokumen ini sudah tersedia sebagai request siap jalan, lengkap
 > dengan auto-simpan token setelah Login.
->
-> - [`SIGULA.postman_environment.json`](SIGULA.postman_environment.json) ke Postman —
->   seluruh 50 endpoint di dokumen ini sudah tersedia sebagai request siap jalan, lengkap
->   dengan auto-simpan token setelah Login.
 
 Base URL: `{APP_URL}/api/v1`
+
+Versi API saat ini: **v1** · Versi aplikasi: **1.1.0** (lihat `GET /versi`).
 
 Semua request/response memakai JSON dan header:
 
@@ -66,6 +64,26 @@ aturan bisnis:
 | Kategori biaya | `Listrik`, `Transport`, `Sewa`, `Lainnya` | huruf kecil                  |
 
 **Paginasi** — `?perPage=25` (maks 200) dan `?page=2` pada endpoint transaksi.
+
+---
+
+## 0. Versi Aplikasi
+
+### `GET /versi`
+
+**Tanpa autentikasi.** Dipakai frontend untuk mendeteksi rilis baru dan menandai
+pembaruan wajib.
+
+```jsonc
+{ "data": { "aplikasi": "SIGULA", "pemilik": "PT Nira Sari Murni",
+            "versi": "1.1.0", "dirilis": "2026-08-25", "versiApi": "v1",
+            "minimalWeb": "1.1.0",
+            "catatan": [ "Status penderes petani bisa lebih dari satu (mis. PMS + PLMD).", "..." ] } }
+```
+
+`minimalWeb` adalah versi web tertua yang masih kompatibel dengan API ini. Bila versi
+bundel yang sedang jalan lebih lama, frontend menampilkan popup pembaruan **wajib**
+(tidak bisa ditunda). Nilainya diatur lewat `SIGULA_MIN_WEB_VERSION`.
 
 ---
 
@@ -157,7 +175,7 @@ Blok `keuangan` dan `tren` hanya muncul untuk role yang boleh melihat keuangan.
 
 | Method | Endpoint       | Keterangan                                |
 | ------ | -------------- | ----------------------------------------- |
-| GET    | `/petani`      | `?q=` cari nama / nomor member / kontak   |
+| GET    | `/petani`      | `?q=` cari nama / nomor member / kontak, `?statusPenderes=pms,plmd` filter multi-status |
 | POST   | `/petani`      |                                           |
 | GET    | `/petani/{id}` |                                           |
 | PUT    | `/petani/{id}` |                                           |
@@ -165,16 +183,87 @@ Blok `keuangan` dan `tren` hanya muncul untuk role yang boleh melihat keuangan.
 
 ```jsonc
 // POST request — nomorMember boleh dikosongkan, sistem generate 3 digit berikutnya
-{ "nama": "Sukirman", "status": "Member", "kontak": "0812-3344-5566", "alamat": "Desa Sukamaju" }
+{ "nama": "Sukirman", "status": "Member", "kontak": "0812-3344-5566", "alamat": "Desa Sukamaju",
+  "kodeLahan": "BTN-014", "rtRw": "02/05", "statusPenderes": ["PMS", "PLMD"] }
 
 // response 201
 { "message": "Petani berhasil ditambahkan.",
   "data": { "id": "1", "nama": "Sukirman", "status": "Member", "statusKode": "member",
             "nomorMember": "201", "labelMember": "Petani 201", "kontak": "...", "alamat": "...",
+            "kodeLahan": "BTN-014", "rtRw": "02/05",
+            "statusPenderes": [
+              { "kode": "pms", "label": "PMS", "keterangan": "Penderes Milik Sendiri" },
+              { "kode": "plmd", "label": "PLMD", "keterangan": "Pemilik Lahan Mendreng (Bayar Gula)" }
+            ],
             "totalTransaksi": 0, "totalNilai": 0 } }
 ```
 
 Status `Non-Member` otomatis mengosongkan `nomorMember` walaupun dikirim.
+
+### Status penderes (bisa lebih dari satu)
+
+Satu petani boleh menyandang beberapa status sekaligus (data client menulisnya
+`PMS + PLMR`), jadi disimpan sebagai relasi, bukan satu kolom enum.
+
+| Kode   | Kepanjangan                             |
+| ------ | --------------------------------------- |
+| `pms`  | Penderes Milik Sendiri                  |
+| `pmms` | Penderes Maro dan Milik Sendiri         |
+| `plmr` | Pemilik Lahan Maro (Masak Nira)         |
+| `plmd` | Pemilik Lahan Mendreng (Bayar Gula)     |
+| `pls`  | Pemilik Lahan Sewa (Bayar Uang)         |
+| `pl`   | Pemilik Lahan (Manggis)                 |
+| `pm`   | Penderes Maro                           |
+
+Pada `PUT /petani/{id}`, `statusPenderes` bersifat **pengganti**: status yang tidak
+ikut dikirim akan dihapus. Kirim `[]` untuk mengosongkan seluruhnya.
+
+`kodeLahan` unik antar petani (422 bila dipakai dua kali).
+
+### Impor massal dari CSV
+
+Data petani yang dikirim client bisa dimasukkan sekaligus:
+
+```bash
+# lihat hasilnya dulu tanpa menyimpan
+php artisan sigula:impor-petani data-petani-batuanten.csv --uji-coba
+
+# jalankan sungguhan
+php artisan sigula:impor-petani data-petani-batuanten.csv
+```
+
+Header CSV dikenali otomatis (urutan kolom bebas): `nama`/`nama petani`, `kode lahan`,
+`rt/rw`, `status`, `nomor member`, `kontak`, `alamat`. Pemisah `,` `;` atau tab
+dideteksi sendiri. Kolom status boleh berisi kombinasi seperti `PMS + PLMR`.
+
+Perintahnya idempoten: baris dicocokkan lewat `kode lahan` (atau nama bila kosong),
+jadi menjalankan ulang memperbarui data, bukan menggandakannya.
+
+---
+
+## 3b. Pengepul
+
+Perantara antara petani dan perusahaan. Hak aksesnya menempel pada ability petani
+(`lihat-petani` untuk membaca, `kelola-petani` untuk mengubah).
+
+| Method | Endpoint         | Keterangan                                       |
+| ------ | ---------------- | ------------------------------------------------ |
+| GET    | `/pengepul`      | `?q=` cari nama, `?sertakanNonaktif=1`           |
+| POST   | `/pengepul`      |                                                  |
+| PUT    | `/pengepul/{id}` |                                                  |
+| DELETE | `/pengepul/{id}` | Dinonaktifkan (bukan dihapus) bila punya transaksi |
+
+```jsonc
+// POST request
+{ "nama": "Haji Rohmat", "kontak": "081234567890", "alamat": "Batuanten" }
+
+// response 201
+{ "message": "Pengepul berhasil ditambahkan.",
+  "data": { "id": "1", "nama": "Haji Rohmat", "kontak": "081234567890",
+            "alamat": "Batuanten", "aktif": true } }
+```
+
+Default `GET /pengepul` hanya mengembalikan yang aktif.
 
 ---
 
@@ -255,14 +344,18 @@ Response menyertakan `ringkasan`:
 
 ```jsonc
 // request — "harga" boleh dikosongkan: otomatis dari master harga yang berlaku
-// pada tanggal transaksi, tapi tetap bisa dinego manual per transaksi
-{ "tanggal": "2026-08-13", "petaniId": "1", "grade": "NS 1", "kg": 250, "harga": null }
+// pada tanggal transaksi, tapi tetap bisa dinego manual per transaksi.
+// "pengepulId" opsional: isi bila dibeli lewat perantara, null bila langsung dari petani.
+{ "tanggal": "2026-08-13", "petaniId": "1", "pengepulId": null,
+  "grade": "NS 1", "kg": 250, "harga": null }
 
 // response 201
 { "message": "Transaksi pembelian tersimpan.",
   "data": { "id": "608", "nomorKwitansi": "KW/2026/08/0044", "tanggal": "2026-08-13",
             "tanggalLabel": "13 Agustus 2026", "petaniId": "1", "namaPetani": "Sukirman",
-            "grade": "NS 1", "gradeKode": "ns1", "kg": 250, "harga": 14500, "total": 3625000,
+            "pengepulId": null, "pengepul": null,
+            "grade": "NS 1", "gradeKode": "ns1", "kg": 250, "harga": 14500,
+            "total": 3625000, "totalSebelumBulat": 3625000,
             "statusPembayaran": "Lunas", "statusPembayaranKode": "lunas" },
   "kwitansi": { "nomor": "KW/2026/08/0044", "tanggal": "13 Agustus 2026",
                 "namaPetani": "Sukirman", "nomorMember": "Petani 201", "grade": "NS 1",
@@ -271,6 +364,15 @@ Response menyertakan `ringkasan`:
 ```
 
 Efek otomatis: stok bahan mentah grade tersebut bertambah + 1 baris kartu stok.
+
+**Pembulatan.** `total` adalah nominal yang dibayarkan, dibulatkan ke kelipatan 500:
+sisa di atas kelipatan 1.000 naik ke 500 bila ≤ 500, selebihnya ke 1.000 berikutnya
+(25.300 → 25.500; 25.700 → 26.000). Hasil hitungan aslinya tetap dikirim sebagai
+`totalSebelumBulat`.
+
+**Filter daftar.** `?pengepulId=` menyaring satu pengepul; `?punyaPengepul=1` hanya
+transaksi lewat pengepul, `=0` hanya pembelian langsung. Pencarian `?q=` juga
+menjangkau nama pengepul.
 
 ### `DELETE /pembelian/{id}`
 
@@ -371,26 +473,40 @@ Filter: `tanggal` (semua tungku di hari itu), `dari`, `sampai`, `status`, `grade
 ### `POST /produksi/sesi` — mulai sesi
 
 ```jsonc
-// request — kodeTungku opsional (otomatis TGK-01, TGK-02, ... per hari)
-{ "tanggal": "2026-08-13", "kodeTungku": "TGK-01", "grade": "NS 1", "kgBahan": 100,
+// request — kodeTungku opsional (otomatis TGK-01, TGK-02, ... per hari).
+// Satu tungku boleh memakai beberapa grade sekaligus lewat array "bahan";
+// "karyawan2Id" opsional — kosongkan bila dikerjakan satu orang.
+{ "tanggal": "2026-08-13", "kodeTungku": "TGK-01",
+  "bahan": [ { "grade": "NS 1", "kg": 60 }, { "grade": "NS 2", "kg": 40.5 } ],
   "karyawan1Id": "2", "karyawan2Id": "1" }
 
 // response 201
 { "message": "Sesi tungku TGK-01 dimulai.",
-  "data": { "id": "1837", "tanggal": "2026-08-13", "kodeTungku": "TGK-01", "grade": "NS 1",
-            "kgBahan": 100, "karyawanIds": ["2","1"],
+  "data": { "id": "1837", "tanggal": "2026-08-13", "kodeTungku": "TGK-01",
+            "grade": "NS 1", "gradeKode": "ns1", "kgBahan": 100.5,
+            "bahan": [ { "grade": "NS 1", "gradeKode": "ns1", "kg": 60 },
+                       { "grade": "NS 2", "gradeKode": "ns2", "kg": 40.5 } ],
+            "karyawanIds": ["2","1"],
             "karyawan": [ { "id": "2", "nama": "Pardi" }, { "id": "1", "nama": "Asep Saepudin" } ],
             "kgKristal": null, "kgBrondol": null, "rendemen": null,
             "status": "Sedang Diproses", "statusKode": "sedang_diproses" } }
 ```
 
-Validasi: dua slot karyawan wajib diisi dan tidak boleh orang yang sama; bahan mentah
-harus tersedia **setelah dikurangi tungku lain yang masih berjalan**.
+Kolom ringkasan `grade` berisi grade **baris pertama** dan `kgBahan` adalah **total
+seluruh grade**; rinciannya ada di `bahan`.
+
+Validasi: `karyawan1Id` wajib, `karyawan2Id` opsional tapi tidak boleh orang yang sama;
+tiap grade hanya boleh muncul sekali; kg boleh desimal (maks 2 angka di belakang koma);
+stok dicek **per grade**, bukan totalnya, setelah dikurangi tungku lain yang masih berjalan.
+
+Bentuk lama (`grade` + `kgBahan` tunggal) masih diterima demi kompatibilitas klien lama.
 
 ### `POST /produksi/sesi/{id}/selesai`
 
 ```jsonc
-// request — kg untuk SATU TUNGKU (gabungan 2 karyawan), bukan per orang
+// request — kg untuk SATU TUNGKU (gabungan seluruh karyawan), bukan per orang.
+// Boleh desimal. Tidak ada batas atas: rendemen >100% wajar bila ada penambahan
+// gula di luar sistem, dan dicatat apa adanya.
 { "kgKristal": 80, "kgBrondol": 20 }
 
 // response 200

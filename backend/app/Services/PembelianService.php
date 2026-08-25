@@ -8,8 +8,10 @@ use App\Enums\Grade;
 use App\Enums\StatusPembayaran;
 use App\Exceptions\BusinessRuleException;
 use App\Models\Pembelian;
+use App\Models\Pengepul;
 use App\Models\Petani;
 use App\Models\User;
+use App\Support\Pembulatan;
 use App\Support\Periode;
 use Illuminate\Support\Facades\DB;
 
@@ -27,6 +29,7 @@ final class PembelianService
      * @param array{
      *     tanggal: string,
      *     petani_id: int|string,
+     *     pengepul_id?: int|string|null,
      *     grade: Grade,
      *     kilogram: float,
      *     harga_per_kg?: float|null,
@@ -47,6 +50,9 @@ final class PembelianService
             $grade = $data['grade'];
             $tanggal = Periode::tanggal($data['tanggal']);
             $petani = Petani::query()->findOrFail($data['petani_id']);
+            $pengepul = filled($data['pengepul_id'] ?? null)
+                ? Pengepul::query()->findOrFail($data['pengepul_id'])
+                : null;
 
             $hargaMaster = $this->harga->hargaBerlaku($grade, $tanggal);
             $hargaPerKg = isset($data['harga_per_kg']) && $data['harga_per_kg'] !== null
@@ -64,15 +70,22 @@ final class PembelianService
                 throw BusinessRuleException::untukField('hargaPerKg', 'Harga per kg harus lebih dari 0.');
             }
 
+            // Nominal dibayar dibulatkan ke kelipatan 500/1.000; nilai asli
+            // tetap disimpan supaya bisa direkonsiliasi dengan kg x harga.
+            $totalAsli = round($kilogram * $hargaPerKg, 2);
+            $totalBayar = Pembulatan::keLimaRatus($totalAsli);
+
             $pembelian = Pembelian::create([
                 'nomor_kwitansi' => $this->nomor->kwitansiPembelian($tanggal),
                 'tanggal' => $tanggal->toDateString(),
                 'petani_id' => $petani->id,
+                'pengepul_id' => $pengepul?->id,
                 'grade' => $grade->value,
                 'grade_harga_id' => $hargaMaster?->id,
                 'kilogram' => $kilogram,
                 'harga_per_kg' => $hargaPerKg,
-                'total' => round($kilogram * $hargaPerKg, 2),
+                'total' => $totalBayar,
+                'total_sebelum_bulat' => $totalAsli,
                 'status_pembayaran' => ($data['status_pembayaran'] ?? StatusPembayaran::LUNAS)->value,
                 'catatan' => $data['catatan'] ?? null,
                 'user_id' => $user?->getKey(),
@@ -95,12 +108,14 @@ final class PembelianService
                     'kilogram' => $kilogram,
                     'harga_per_kg' => $hargaPerKg,
                     'total' => (float) $pembelian->total,
+                    'total_sebelum_bulat' => $totalAsli,
+                    'pengepul' => $pengepul?->nama,
                     'harga_master' => $hargaMaster?->harga_per_kg,
                 ],
                 $user,
             );
 
-            return $pembelian->load(['petani', 'gradeHarga']);
+            return $pembelian->load(['petani', 'pengepul', 'gradeHarga']);
         });
     }
 

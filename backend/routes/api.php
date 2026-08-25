@@ -13,11 +13,13 @@ use App\Http\Controllers\Api\V1\LaporanController;
 use App\Http\Controllers\Api\V1\MasterHargaController;
 use App\Http\Controllers\Api\V1\MasterTarifController;
 use App\Http\Controllers\Api\V1\PembelianController;
+use App\Http\Controllers\Api\V1\PengepulController;
 use App\Http\Controllers\Api\V1\PenggajianController;
 use App\Http\Controllers\Api\V1\PenjualanController;
 use App\Http\Controllers\Api\V1\PetaniController;
 use App\Http\Controllers\Api\V1\SesiTungkuController;
 use App\Http\Controllers\Api\V1\StokController;
+use App\Http\Controllers\Api\V1\VersiController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -30,6 +32,9 @@ use Illuminate\Support\Facades\Route;
 */
 
 Route::prefix('v1')->group(function (): void {
+    // Publik: dipakai frontend untuk mendeteksi rilis baru, termasuk sebelum login.
+    Route::get('versi', VersiController::class);
+
     Route::post('auth/login', [AuthController::class, 'login'])->middleware('throttle:10,1');
 
     Route::middleware('auth:sanctum')->group(function (): void {
@@ -43,7 +48,16 @@ Route::prefix('v1')->group(function (): void {
             Route::get('petani', [PetaniController::class, 'index']);
             Route::get('petani/{petani}', [PetaniController::class, 'show']);
         });
+        // Pengepul ikut hak akses petani: sama-sama master data pemasok bahan.
+        Route::middleware('can:lihat-petani')->group(function (): void {
+            Route::get('pengepul', [PengepulController::class, 'index']);
+        });
+
         Route::middleware('can:kelola-petani')->group(function (): void {
+            Route::post('pengepul', [PengepulController::class, 'store']);
+            Route::put('pengepul/{pengepul}', [PengepulController::class, 'update']);
+            Route::delete('pengepul/{pengepul}', [PengepulController::class, 'destroy']);
+
             Route::post('petani', [PetaniController::class, 'store']);
             Route::put('petani/{petani}', [PetaniController::class, 'update']);
             Route::delete('petani/{petani}', [PetaniController::class, 'destroy']);

@@ -11,6 +11,7 @@ use App\Models\GajiMingguan;
 use App\Models\Karyawan;
 use App\Models\ProduksiKaryawan;
 use App\Models\User;
+use App\Support\Pembulatan;
 use App\Support\Periode;
 use App\Support\TarifResolver;
 use Illuminate\Support\Facades\DB;
@@ -172,6 +173,7 @@ final class PenggajianService
                 'upah_brondol' => $hitungan['upahBrondol'],
                 'uang_makan' => $hitungan['uangMakan'],
                 'total' => $hitungan['total'],
+                'total_sebelum_bulat' => $hitungan['totalSebelumBulat'],
                 'status' => StatusGaji::SUDAH_DIBAYAR->value,
                 'dibayar_pada' => now(),
                 'dibayar_oleh' => $user?->getKey(),
@@ -343,6 +345,10 @@ final class PenggajianService
             $upahBrondol = round($nilai['upahBrondol'], 2);
             $uangMakan = round($nilai['uangMakan'], 2);
 
+            // Gaji yang dibayarkan dibulatkan ke kelipatan 500/1.000; nilai
+            // hasil hitungan asli tetap dibawa untuk keperluan rekonsiliasi.
+            $totalAsli = round($upahKristal + $upahBrondol + $uangMakan, 2);
+
             $hasil[$id] = [
                 'kgKristal' => round($nilai['kgKristal'], 2),
                 'kgBrondol' => round($nilai['kgBrondol'], 2),
@@ -350,7 +356,8 @@ final class PenggajianService
                 'upahKristal' => $upahKristal,
                 'upahBrondol' => $upahBrondol,
                 'uangMakan' => $uangMakan,
-                'total' => round($upahKristal + $upahBrondol + $uangMakan, 2),
+                'totalSebelumBulat' => $totalAsli,
+                'total' => Pembulatan::keLimaRatus($totalAsli),
             ];
         }
 
@@ -367,6 +374,7 @@ final class PenggajianService
             'upahKristal' => 0.0,
             'upahBrondol' => 0.0,
             'uangMakan' => 0.0,
+            'totalSebelumBulat' => 0.0,
             'total' => 0.0,
         ];
     }
@@ -388,6 +396,7 @@ final class PenggajianService
                 'upahKristal' => (float) $dibayar->upah_kristal,
                 'upahBrondol' => (float) $dibayar->upah_brondol,
                 'uangMakan' => (float) $dibayar->uang_makan,
+                'totalSebelumBulat' => (float) ($dibayar->total_sebelum_bulat ?? $dibayar->total),
                 'total' => (float) $dibayar->total,
             ]
             : $live;

@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { Printer } from "lucide-react";
+import { Printer, Receipt } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -8,17 +8,21 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { StrukThermal, cetakThermal } from "@/components/sigula/thermal-print";
 
 export function PrintDialog({
   open,
   onOpenChange,
   title,
   children,
+  thermal,
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   title: string;
   children: ReactNode;
+  /** Versi ringkas untuk printer thermal 58mm; tombolnya muncul bila diisi. */
+  thermal?: ReactNode;
 }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -42,10 +46,18 @@ export function PrintDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Tutup
           </Button>
+          {thermal && (
+            <Button variant="secondary" onClick={cetakThermal}>
+              <Receipt className="mr-2 size-4" /> Cetak Thermal 58mm
+            </Button>
+          )}
           <Button onClick={() => window.print()}>
             <Printer className="mr-2 size-4" /> Cetak
           </Button>
         </DialogFooter>
+
+        {/* Selalu di DOM tapi tersembunyi; hanya tampil saat mode cetak thermal. */}
+        {thermal && <StrukThermal>{thermal}</StrukThermal>}
       </DialogContent>
     </Dialog>
   );

@@ -81,3 +81,22 @@ export function labelBulanSingkat(key: string): string {
   const [y, m] = key.split("-").map(Number);
   return `${BULAN[(m ?? 1) - 1]!.slice(0, 3)} ${String(y).slice(2)}`;
 }
+
+/**
+ * Pembulatan nominal ke kelipatan 500 sesuai aturan client.
+ *
+ * Cerminan dari App\Support\Pembulatan di backend — dipakai HANYA untuk pratinjau
+ * di form; nilai yang disimpan tetap hasil hitungan backend.
+ *
+ * Sisa di atas kelipatan 1.000 naik ke 500 bila <= 500, selebihnya naik ke
+ * 1.000 berikutnya. Contoh: 25.300 → 25.500, 25.700 → 26.000.
+ */
+export function bulatkanKeLimaRatus(nominal: number): number {
+  if (!Number.isFinite(nominal) || nominal <= 0) return 0;
+
+  const dasar = Math.floor(nominal / 1000) * 1000;
+  const sisa = Math.round((nominal - dasar) * 100) / 100;
+
+  if (sisa <= 0) return dasar;
+  return sisa <= 500 ? dasar + 500 : dasar + 1000;
+}

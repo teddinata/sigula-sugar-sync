@@ -51,7 +51,7 @@ import {
   useSesiList,
   useTrenRendemen,
 } from "@/hooks/use-produksi";
-import { useKaryawanList } from "@/hooks/use-master-data";
+import { useKaryawanList, useTambahKaryawan } from "@/hooks/use-master-data";
 import { useStokPosisi } from "@/hooks/use-stok";
 
 export const Route = createFileRoute("/_app/produksi")({
@@ -75,6 +75,9 @@ export const Route = createFileRoute("/_app/produksi")({
 
 const PER_PAGE = 50;
 
+/** Radix Select melarang value string kosong, jadi "tanpa karyawan 2" perlu sentinel. */
+const KARYAWAN_KOSONG = "__sendirian__";
+
 function apiErrorMessage(err: unknown, fallback: string): string {
   return err instanceof ApiError ? (err.firstFieldError ?? err.message) : fallback;
 }
@@ -94,8 +97,20 @@ function bagiDua(total: number): [number, number] {
   return [pertama, kedua];
 }
 
-function namaKaryawanSesi(sesi: SesiTungku, index: 0 | 1): string {
+function namaKaryawanSesi(sesi: SesiTungku, index: number): string {
   return sesi.karyawan?.[index]?.nama ?? "-";
+}
+
+/** "Pardi & Asep", atau hanya "Pardi" kalau tungkunya dikerjakan sendirian. */
+function daftarNamaKaryawan(sesi: SesiTungku): string {
+  const nama = (sesi.karyawan ?? []).map((k) => k.nama).filter(Boolean);
+  return nama.length > 0 ? nama.join(" & ") : "-";
+}
+
+/** Ringkasan bahan: "60 kg NS 1 + 40,5 kg NS 2". */
+function ringkasBahan(sesi: SesiTungku): string {
+  if (!sesi.bahan || sesi.bahan.length === 0) return sesi.grade;
+  return sesi.bahan.map((b) => `${angka(b.kg)} kg ${b.grade}`).join(" + ");
 }
 
 function StatusBadge({ status }: { status: StatusSesi }) {
@@ -108,23 +123,35 @@ function StatusBadge({ status }: { status: StatusSesi }) {
   );
 }
 
+/** Satu baris bahan pada form; satu tungku boleh memakai beberapa grade. */
+interface BarisBahanForm {
+  grade: Grade;
+  kg: string;
+}
+
 interface MulaiFormState {
   tanggal: string;
   kodeTungku: string;
-  grade: Grade;
-  kgBahan: string;
+  bahan: BarisBahanForm[];
   k1: string;
+  /** Boleh kosong: ada tungku yang dikerjakan satu orang saja. */
   k2: string;
 }
 
 const emptyMulaiForm: MulaiFormState = {
   tanggal: todayISO(),
   kodeTungku: "",
-  grade: "NS 1",
-  kgBahan: "",
+  bahan: [{ grade: "NS 1", kg: "" }],
   k1: "",
   k2: "",
 };
+
+/** Membagi hasil sesuai jumlah karyawan: 1 orang dapat utuh, 2 orang dibagi rata. */
+function bagiPorsi(total: number, jumlahOrang: number): number[] {
+  if (jumlahOrang <= 1) return [Math.round(total * 100) / 100];
+  const [a, b] = bagiDua(total);
+  return [a, b];
+}
 
 function ProduksiPage() {
   // ---- Data referensi (karyawan, stok) --------------------------------------------
@@ -201,28 +228,82 @@ function ProduksiPage() {
   };
 
   const simpanMulai = async () => {
-    const kgNum = Number(form.kgBahan);
     if (!form.tanggal) return setErr("Tanggal wajib diisi.");
-    if (!form.kgBahan.trim() || Number.isNaN(kgNum) || kgNum <= 0)
-      return setErr("Kg bahan mentah harus lebih dari 0.");
-    if (!form.k1 || !form.k2) return setErr("Kedua slot karyawan wajib diisi.");
-    if (form.k1 === form.k2)
+
+    const bahan = form.bahan.map((b) => ({ grade: b.grade, kg: Number(b.kg) }));
+
+    if (bahan.some((b) => !Number.isFinite(b.kg) || b.kg <= 0))
+      return setErr("Kg bahan mentah setiap grade harus lebih dari 0.");
+
+    const gradeUnik = new Set(bahan.map((b) => b.grade));
+    if (gradeUnik.size !== bahan.length)
+      return setErr("Grade yang sama tidak boleh dipilih dua kali dalam satu tungku.");
+
+    if (!form.k1) return setErr("Karyawan 1 wajib dipilih.");
+    if (form.k2 && form.k1 === form.k2)
       return setErr("Karyawan 1 dan Karyawan 2 tidak boleh orang yang sama.");
+
     try {
       const res = await mulaiSesi.mutateAsync({
         tanggal: form.tanggal,
         kodeTungku: form.kodeTungku.trim() || undefined,
-        grade: form.grade,
-        kgBahan: kgNum,
+        bahan,
         karyawan1Id: form.k1,
-        karyawan2Id: form.k2,
+        karyawan2Id: form.k2 || undefined,
       });
-      toast.success(res.message, {
-        description: `${namaKaryawanSesi(res.sesi, 0)} & ${namaKaryawanSesi(res.sesi, 1)}`,
-      });
+      toast.success(res.message, { description: daftarNamaKaryawan(res.sesi) });
       setOpenMulai(false);
     } catch (e) {
       setErr(apiErrorMessage(e, "Gagal memulai sesi tungku."));
+    }
+  };
+
+  const ubahBaris = (index: number, patch: Partial<BarisBahanForm>) =>
+    setForm((f) => ({
+      ...f,
+      bahan: f.bahan.map((b, i) => (i === index ? { ...b, ...patch } : b)),
+    }));
+
+  const tambahBaris = () =>
+    setForm((f) => {
+      const terpakai = new Set(f.bahan.map((b) => b.grade));
+      const berikutnya = GRADES.find((g) => !terpakai.has(g));
+      return berikutnya ? { ...f, bahan: [...f.bahan, { grade: berikutnya, kg: "" }] } : f;
+    });
+
+  const hapusBaris = (index: number) =>
+    setForm((f) =>
+      f.bahan.length <= 1 ? f : { ...f, bahan: f.bahan.filter((_, i) => i !== index) },
+    );
+
+  const totalKgForm = form.bahan.reduce((t, b) => t + (Number(b.kg) || 0), 0);
+
+  // ---- Tambah karyawan cepat dari form produksi -------------------------------
+  // Karyawan baru sering muncul saat sesi mau dimulai; tanpa ini operator harus
+  // pindah ke halaman Master dulu dan kehilangan isian formnya.
+  const tambahKaryawan = useTambahKaryawan();
+  const [openKaryawan, setOpenKaryawan] = useState(false);
+  const [formKaryawan, setFormKaryawan] = useState({ nama: "", kontak: "" });
+  const [errKaryawan, setErrKaryawan] = useState<string | null>(null);
+
+  const simpanKaryawan = async () => {
+    const nama = formKaryawan.nama.trim();
+    if (!nama) return setErrKaryawan("Nama karyawan wajib diisi.");
+
+    try {
+      const baru = await tambahKaryawan.mutateAsync({
+        nama,
+        kontak: formKaryawan.kontak.trim() || undefined,
+      });
+
+      // Langsung isikan ke slot yang masih kosong supaya alurnya tidak terputus.
+      setForm((f) => (f.k1 ? (f.k2 ? f : { ...f, k2: baru.id }) : { ...f, k1: baru.id }));
+      toast.success("Karyawan ditambahkan", { description: baru.nama });
+      setFormKaryawan({ nama: "", kontak: "" });
+      setErrKaryawan(null);
+      setOpenKaryawan(false);
+    } catch (e) {
+      setErrKaryawan(apiErrorMessage(e, "Gagal menambah karyawan."));
     }
   };
 
@@ -236,9 +317,10 @@ function ProduksiPage() {
   const kgBrondolNum = Number(hasil.brondol) || 0;
   const totalHasil = kgKristalNum + kgBrondolNum;
   const rendemenPreview = selesai?.kgBahan ? (totalHasil / selesai.kgBahan) * 100 : 0;
-  const [bahan1, bahan2] = selesai ? bagiDua(selesai.kgBahan) : [0, 0];
-  const [kristal1, kristal2] = bagiDua(kgKristalNum);
-  const [brondol1, brondol2] = bagiDua(kgBrondolNum);
+  const jumlahPekerja = selesai ? Math.max(selesai.karyawanIds.length, 1) : 2;
+  const porsiBahan = bagiPorsi(selesai?.kgBahan ?? 0, jumlahPekerja);
+  const porsiKristal = bagiPorsi(kgKristalNum, jumlahPekerja);
+  const porsiBrondol = bagiPorsi(kgBrondolNum, jumlahPekerja);
 
   const bukaSelesai = (sesi: SesiTungku) => {
     setSelesai(sesi);
@@ -252,10 +334,8 @@ function ProduksiPage() {
       return setErrHasil("Isi hasil produksi tungku ini (kristal dan/atau brondol).");
     if (kgKristalNum < 0 || kgBrondolNum < 0) return setErrHasil("Nilai tidak boleh negatif.");
     if (totalHasil <= 0) return setErrHasil("Total hasil harus lebih dari 0.");
-    if (totalHasil > selesai.kgBahan)
-      return setErrHasil(
-        `Total hasil (${angka(totalHasil)} kg) tidak boleh melebihi bahan mentah (${angka(selesai.kgBahan)} kg).`,
-      );
+    // Tidak ada batas atas: di lapangan kadang ada penambahan gula di luar
+    // sistem, sehingga rendemen bisa melebihi 100%.
     try {
       const res = await selesaikanSesi.mutateAsync({
         id: selesai.id,
@@ -311,7 +391,19 @@ function ProduksiPage() {
       header: "Kode Tungku",
       cell: (r) => <span className="font-medium">{r.kodeTungku}</span>,
     },
-    { key: "grade", header: "Grade", cell: (r) => <Badge variant="secondary">{r.grade}</Badge> },
+    {
+      key: "grade",
+      header: "Grade",
+      cell: (r) => (
+        <div className="flex flex-wrap gap-1">
+          {(r.bahan && r.bahan.length > 0 ? r.bahan.map((b) => b.grade) : [r.grade]).map((g) => (
+            <Badge key={g} variant="secondary">
+              {g}
+            </Badge>
+          ))}
+        </div>
+      ),
+    },
     { key: "bahan", header: "Kg Bahan", align: "right", cell: (r) => `${angka(r.kgBahan)} kg` },
     {
       key: "kar",
@@ -319,7 +411,9 @@ function ProduksiPage() {
       cell: (r) => (
         <div className="text-xs">
           <p>{namaKaryawanSesi(r, 0)}</p>
-          <p className="text-muted-foreground">{namaKaryawanSesi(r, 1)}</p>
+          <p className="text-muted-foreground">
+            {r.karyawanIds.length > 1 ? namaKaryawanSesi(r, 1) : "Dikerjakan sendirian"}
+          </p>
         </div>
       ),
     },
@@ -607,36 +701,78 @@ function ProduksiPage() {
                 />
               </div>
             </div>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label>Grade Bahan Mentah</Label>
-                <Select
-                  value={form.grade}
-                  onValueChange={(v: Grade) => setForm({ ...form, grade: v })}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label>Bahan Mentah</Label>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={tambahBaris}
+                  disabled={form.bahan.length >= GRADES.length}
                 >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {GRADES.map((g) => (
-                      <SelectItem key={g} value={g}>
-                        {g}
-                        {posisi ? ` — stok ${angka(posisi.saldo[g])} kg` : ""}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  <Plus className="size-4" /> Tambah grade
+                </Button>
               </div>
-              <div className="space-y-2">
-                <Label>Kg Bahan Mentah</Label>
-                <Input
-                  type="number"
-                  min={0}
-                  value={form.kgBahan}
-                  onChange={(e) => setForm({ ...form, kgBahan: e.target.value })}
-                  placeholder="0"
-                />
-              </div>
+
+              {/* Satu tungku boleh dimasak dari beberapa grade sekaligus. */}
+              {form.bahan.map((baris, i) => (
+                <div key={i} className="flex gap-2">
+                  <Select
+                    value={baris.grade}
+                    onValueChange={(v: Grade) => ubahBaris(i, { grade: v })}
+                  >
+                    <SelectTrigger className="flex-1">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {GRADES.map((g) => (
+                        <SelectItem
+                          key={g}
+                          value={g}
+                          disabled={form.bahan.some((b, j) => j !== i && b.grade === g)}
+                        >
+                          {g}
+                          {posisi ? ` — stok ${angka(posisi.saldo[g])} kg` : ""}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Input
+                    type="number"
+                    min={0}
+                    step="0.01"
+                    inputMode="decimal"
+                    className="w-32"
+                    value={baris.kg}
+                    onChange={(e) => ubahBaris(i, { kg: e.target.value })}
+                    placeholder="kg"
+                    aria-label={`Kg bahan ${baris.grade}`}
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => hapusBaris(i)}
+                    disabled={form.bahan.length <= 1}
+                    aria-label={`Hapus baris ${baris.grade}`}
+                  >
+                    <Trash2 className="size-4" />
+                  </Button>
+                </div>
+              ))}
+
+              {form.bahan.length > 1 && (
+                <p className="text-xs text-muted-foreground">
+                  Total bahan mentah: <span className="font-medium">{angka(totalKgForm)} kg</span>
+                </p>
+              )}
+            </div>
+            <div className="flex items-center justify-between">
+              <Label className="text-sm">Karyawan Bertugas</Label>
+              <Button type="button" variant="ghost" size="sm" onClick={() => setOpenKaryawan(true)}>
+                <Plus className="size-4" /> Tambah Karyawan
+              </Button>
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
@@ -655,12 +791,16 @@ function ProduksiPage() {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label>Karyawan 2 (wajib)</Label>
-                <Select value={form.k2} onValueChange={(v) => setForm({ ...form, k2: v })}>
+                <Label>Karyawan 2 (opsional)</Label>
+                <Select
+                  value={form.k2 || KARYAWAN_KOSONG}
+                  onValueChange={(v) => setForm({ ...form, k2: v === KARYAWAN_KOSONG ? "" : v })}
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="Pilih karyawan" />
                   </SelectTrigger>
                   <SelectContent>
+                    <SelectItem value={KARYAWAN_KOSONG}>Dikerjakan sendirian</SelectItem>
                     {karyawanList.map((k) => (
                       <SelectItem key={k.id} value={k.id} disabled={k.id === form.k1}>
                         {k.nama}
@@ -671,8 +811,10 @@ function ProduksiPage() {
               </div>
             </div>
             <p className="rounded-xl bg-cream px-4 py-3 text-xs text-muted-foreground">
-              Hasil produksi tungku ini nanti dibagi rata otomatis ke kedua karyawan untuk
-              perhitungan gaji. Stok bahan mentah baru dipotong saat sesi ini diselesaikan.
+              {form.k2
+                ? "Hasil produksi tungku ini nanti dibagi rata otomatis ke kedua karyawan untuk perhitungan gaji."
+                : "Tanpa rekan kerja, seluruh hasil tungku ini jadi porsi Karyawan 1 untuk perhitungan gaji."}{" "}
+              Stok bahan mentah baru dipotong saat sesi ini diselesaikan.
             </p>
             {err && <p className="text-sm text-destructive">{err}</p>}
           </div>
@@ -698,12 +840,12 @@ function ProduksiPage() {
             <div className="space-y-4">
               <div className="rounded-xl bg-cream px-4 py-3 text-sm">
                 <p>
-                  Bahan mentah: <span className="font-medium">{selesai.grade}</span> ·{" "}
-                  <span className="font-medium">{angka(selesai.kgBahan)} kg</span>
+                  Bahan mentah: <span className="font-medium">{ringkasBahan(selesai)}</span>
+                  {selesai.bahan && selesai.bahan.length > 1
+                    ? ` = ${angka(selesai.kgBahan)} kg`
+                    : ""}
                 </p>
-                <p className="text-muted-foreground">
-                  Karyawan: {namaKaryawanSesi(selesai, 0)} & {namaKaryawanSesi(selesai, 1)}
-                </p>
+                <p className="text-muted-foreground">Karyawan: {daftarNamaKaryawan(selesai)}</p>
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
@@ -711,6 +853,8 @@ function ProduksiPage() {
                   <Input
                     type="number"
                     min={0}
+                    step="0.01"
+                    inputMode="decimal"
                     value={hasil.kristal}
                     onChange={(e) => setHasil({ ...hasil, kristal: e.target.value })}
                     placeholder="0"
@@ -721,6 +865,8 @@ function ProduksiPage() {
                   <Input
                     type="number"
                     min={0}
+                    step="0.01"
+                    inputMode="decimal"
                     value={hasil.brondol}
                     onChange={(e) => setHasil({ ...hasil, brondol: e.target.value })}
                     placeholder="0"
@@ -734,20 +880,23 @@ function ProduksiPage() {
                 <p className="text-2xl font-semibold">{rendemenPreview.toFixed(1)}%</p>
                 <p className="text-xs text-muted-foreground">
                   ({angka(kgKristalNum)} + {angka(kgBrondolNum)}) ÷ {angka(selesai.kgBahan)} × 100%
-                  — hasil tidak boleh melebihi bahan mentah
+                  {rendemenPreview > 100
+                    ? " — di atas 100%, wajar bila ada penambahan gula di luar sistem"
+                    : ""}
                 </p>
               </div>
               <div className="rounded-xl bg-secondary px-4 py-3 text-sm">
-                <p className="mb-1 font-medium">Pembagian otomatis per karyawan</p>
+                <p className="mb-1 font-medium">
+                  {jumlahPekerja > 1 ? "Pembagian otomatis per karyawan" : "Porsi karyawan"}
+                </p>
                 <div className="grid gap-1 text-muted-foreground">
-                  <p>
-                    {namaKaryawanSesi(selesai, 0)} — {angka(bahan1)} kg bahan, {angka(kristal1)} kg
-                    kristal, {angka(brondol1)} kg brondol
-                  </p>
-                  <p>
-                    {namaKaryawanSesi(selesai, 1)} — {angka(bahan2)} kg bahan, {angka(kristal2)} kg
-                    kristal, {angka(brondol2)} kg brondol
-                  </p>
+                  {porsiBahan.map((kgBahanPorsi, i) => (
+                    <p key={i}>
+                      {namaKaryawanSesi(selesai, i)} — {angka(kgBahanPorsi)} kg bahan,{" "}
+                      {angka(porsiKristal[i] ?? 0)} kg kristal, {angka(porsiBrondol[i] ?? 0)} kg
+                      brondol
+                    </p>
+                  ))}
                 </div>
               </div>
               {errHasil && <p className="text-sm text-destructive">{errHasil}</p>}
@@ -760,6 +909,47 @@ function ProduksiPage() {
             <Button onClick={simpanSelesai} disabled={selesaikanSesi.isPending}>
               {selesaikanSesi.isPending && <Loader2 className="size-4 animate-spin" />}
               Simpan & Selesaikan
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal tambah karyawan cepat (dipanggil dari form Mulai Sesi) */}
+      <Dialog open={openKaryawan} onOpenChange={setOpenKaryawan}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Tambah Karyawan</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Nama Karyawan</Label>
+              <Input
+                autoFocus
+                value={formKaryawan.nama}
+                onChange={(e) => setFormKaryawan({ ...formKaryawan, nama: e.target.value })}
+                placeholder="Nama lengkap"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Kontak (opsional)</Label>
+              <Input
+                value={formKaryawan.kontak}
+                onChange={(e) => setFormKaryawan({ ...formKaryawan, kontak: e.target.value })}
+                placeholder="08xx-xxxx-xxxx"
+              />
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Karyawan baru langsung dipilih ke slot yang masih kosong pada form sesi tungku.
+            </p>
+            {errKaryawan && <p className="text-sm text-destructive">{errKaryawan}</p>}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setOpenKaryawan(false)}>
+              Batal
+            </Button>
+            <Button onClick={simpanKaryawan} disabled={tambahKaryawan.isPending}>
+              {tambahKaryawan.isPending && <Loader2 className="size-4 animate-spin" />}
+              Simpan
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -782,13 +972,14 @@ function ProduksiPage() {
                   <p className="text-xs text-muted-foreground">Status</p>
                   <StatusBadge status={detail.status} />
                 </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Grade</p>
-                  <p className="font-medium">{detail.grade}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Kg Bahan</p>
-                  <p className="font-medium">{angka(detail.kgBahan)} kg</p>
+                <div className="col-span-2">
+                  <p className="text-xs text-muted-foreground">Bahan Mentah</p>
+                  <p className="font-medium">{ringkasBahan(detail)}</p>
+                  {detail.bahan && detail.bahan.length > 1 && (
+                    <p className="text-xs text-muted-foreground">
+                      Total {angka(detail.kgBahan)} kg
+                    </p>
+                  )}
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground">Kg Kristal</p>
@@ -824,7 +1015,7 @@ function ProduksiPage() {
                   <div className="space-y-2">
                     {detail.porsiKaryawan.map((p, i) => (
                       <div key={p.karyawanId} className="rounded-xl border px-4 py-3">
-                        <p className="font-medium">{namaKaryawanSesi(detail, i === 0 ? 0 : 1)}</p>
+                        <p className="font-medium">{namaKaryawanSesi(detail, i)}</p>
                         <p className="text-xs text-muted-foreground">
                           {angka(p.kgBahan)} kg bahan · {angka(p.kgKristal)} kg kristal ·{" "}
                           {angka(p.kgBrondol)} kg brondol

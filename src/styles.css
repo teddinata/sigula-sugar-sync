@@ -134,4 +134,35 @@
   .no-print {
     display: none !important;
   }
+
+  /*
+   * Mode cetak struk thermal 58mm.
+   *
+   * Diaktifkan lewat class `cetak-thermal` pada <html> oleh cetakThermal()
+   * (lihat src/components/sigula/thermal-print.tsx), yang sekaligus menyisipkan
+   * aturan @page dinamis — @page tidak bisa dikondisikan oleh class CSS.
+   *
+   * Memakai `visibility` (bukan `display`) supaya struk tetap ikut layout dan
+   * tidak ada halaman kosong tambahan.
+   */
+  html.cetak-thermal body * {
+    visibility: hidden !important;
+  }
+
+  html.cetak-thermal #struk-thermal,
+  html.cetak-thermal #struk-thermal * {
+    visibility: visible !important;
+  }
+
+  html.cetak-thermal #struk-thermal {
+    position: fixed;
+    left: 0;
+    top: 0;
+    display: block !important;
+    width: 58mm;
+    margin: 0;
+    padding: 2mm;
+    background: #fff;
+    color: #000;
+  }
 }

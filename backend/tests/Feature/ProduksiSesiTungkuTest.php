@@ -166,8 +166,10 @@ class ProduksiSesiTungkuTest extends TestCase
         $this->assertSame(80.0, $this->saldo(KategoriStok::KRISTAL));
     }
 
-    public function test_hasil_tidak_boleh_melebihi_bahan_mentah(): void
+    public function test_hasil_boleh_melebihi_bahan_mentah_karena_ada_penambahan_di_lapangan(): void
     {
+        // Client memakai gula tambahan di luar sistem, jadi rendemen >100% wajar
+        // dan tidak boleh diblokir — cukup dicatat apa adanya.
         $this->masukSebagai();
         $k1 = $this->karyawan('Pardi');
         $k2 = $this->karyawan('Asep');
@@ -181,10 +183,14 @@ class ProduksiSesiTungkuTest extends TestCase
         $this->postJson("/api/v1/produksi/sesi/{$sesi['id']}/selesai", [
             'kgKristal' => 95,
             'kgBrondol' => 20,
-        ])->assertStatus(422);
+        ])->assertOk();
 
-        $this->assertSame(100.0, $this->saldo(KategoriStok::NS1));
-        $this->assertSame(0.0, $this->saldo(KategoriStok::KRISTAL));
+        // assertJsonPath dihindari: JSON menyerialkan 115.0 menjadi 115 (int).
+        $this->assertEqualsWithDelta(115.0, SesiTungku::findOrFail($sesi['id'])->rendemen, 0.001);
+
+        $this->assertSame(0.0, $this->saldo(KategoriStok::NS1));
+        $this->assertSame(95.0, $this->saldo(KategoriStok::KRISTAL));
+        $this->assertSame(20.0, $this->saldo(KategoriStok::BRONDOL));
     }
 
     public function test_hasil_kosong_ditolak(): void

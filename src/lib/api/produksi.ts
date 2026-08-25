@@ -29,16 +29,27 @@ export interface PorsiKaryawan {
   kgBrondol: number;
 }
 
+/** Satu baris bahan mentah; satu tungku boleh memakai beberapa grade sekaligus. */
+export interface BahanSesi {
+  grade: Grade;
+  gradeKode: "ns1" | "ns2" | "kecap";
+  kg: number;
+}
+
 export interface SesiTungku {
   id: string;
   tanggal: string;
   tanggalLabel: string;
   kodeTungku: string;
+  /** Grade utama (baris pertama) — rincian lengkapnya di `bahan`. */
   grade: Grade;
   gradeKode: "ns1" | "ns2" | "kecap";
+  /** TOTAL seluruh grade. */
   kgBahan: number;
-  karyawanIds: [string, string];
-  /** Nama karyawan 1 & 2 — hampir selalu ada (eager-loaded di index/show/store/selesai). */
+  bahan?: BahanSesi[];
+  /** Satu tungku boleh dikerjakan 1 atau 2 orang, jadi panjangnya 1 atau 2. */
+  karyawanIds: string[];
+  /** Nama karyawan yang mengerjakan — eager-loaded di index/show/store/selesai. */
   karyawan?: KaryawanRingkas[];
   kgKristal: number | null;
   kgBrondol: number | null;
@@ -90,14 +101,20 @@ export interface SesiListResult {
   ringkasan: ProduksiRingkasan;
 }
 
+export interface BahanPayload {
+  grade: Grade;
+  kg: number;
+}
+
 export interface MulaiSesiPayload {
   tanggal: string;
   /** Kosongkan (omit/null) → backend generate otomatis "TGK-01", "TGK-02", ... per hari. */
   kodeTungku?: string | null | undefined;
-  grade: Grade;
-  kgBahan: number;
+  /** Boleh lebih dari satu grade dalam satu tungku. */
+  bahan: BahanPayload[];
   karyawan1Id: string;
-  karyawan2Id: string;
+  /** Opsional: ada tungku yang dikerjakan satu orang saja. */
+  karyawan2Id?: string | undefined;
   catatan?: string | undefined;
 }
 

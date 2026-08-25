@@ -22,14 +22,28 @@ class SesiTungkuResource extends JsonResource
             'kodeTungku' => $this->kode_tungku,
             'grade' => $this->grade->label(),
             'gradeKode' => $this->grade->value,
+            // Total seluruh grade; rinciannya ada di `bahan`.
             'kgBahan' => (float) $this->kg_bahan_mentah,
-            'karyawanIds' => [(string) $this->karyawan_1_id, (string) $this->karyawan_2_id],
+            'bahan' => $this->whenLoaded('bahan', fn (): array => $this->bahan
+                ->map(fn ($baris): array => [
+                    'grade' => $baris->grade->label(),
+                    'gradeKode' => $baris->grade->value,
+                    'kg' => (float) $baris->kg,
+                ])->all()),
+            // Tungku bisa dikerjakan 1 atau 2 orang, jadi panjang array mengikuti.
+            'karyawanIds' => array_values(array_filter([
+                (string) $this->karyawan_1_id,
+                $this->karyawan_2_id === null ? null : (string) $this->karyawan_2_id,
+            ])),
             'karyawan' => $this->when(
-                $this->relationLoaded('karyawan1') && $this->relationLoaded('karyawan2'),
-                fn (): array => [
+                $this->relationLoaded('karyawan1'),
+                fn (): array => array_values(array_filter([
                     ['id' => (string) $this->karyawan_1_id, 'nama' => $this->karyawan1?->nama],
-                    ['id' => (string) $this->karyawan_2_id, 'nama' => $this->karyawan2?->nama],
-                ]
+                    $this->karyawan_2_id === null ? null : [
+                        'id' => (string) $this->karyawan_2_id,
+                        'nama' => $this->relationLoaded('karyawan2') ? $this->karyawan2?->nama : null,
+                    ],
+                ]))
             ),
             'kgKristal' => $this->kg_kristal_total === null ? null : (float) $this->kg_kristal_total,
             'kgBrondol' => $this->kg_brondol_total === null ? null : (float) $this->kg_brondol_total,

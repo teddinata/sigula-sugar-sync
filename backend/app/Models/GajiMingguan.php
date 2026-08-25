@@ -24,6 +24,7 @@ class GajiMingguan extends Model
         'upah_brondol',
         'uang_makan',
         'total',
+        'total_sebelum_bulat',
         'status',
         'dibayar_pada',
         'dibayar_oleh',
@@ -41,6 +42,7 @@ class GajiMingguan extends Model
             'upah_brondol' => 'float',
             'uang_makan' => 'float',
             'total' => 'float',
+            'total_sebelum_bulat' => 'float',
             'status' => StatusGaji::class,
             'dibayar_pada' => 'datetime',
         ];

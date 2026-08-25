@@ -25,11 +25,13 @@ class Pembelian extends Model
         'nomor_kwitansi',
         'tanggal',
         'petani_id',
+        'pengepul_id',
         'grade',
         'grade_harga_id',
         'kilogram',
         'harga_per_kg',
         'total',
+        'total_sebelum_bulat',
         'status_pembayaran',
         'catatan',
         'user_id',
@@ -43,6 +45,7 @@ class Pembelian extends Model
             'kilogram' => 'float',
             'harga_per_kg' => 'float',
             'total' => 'float',
+            'total_sebelum_bulat' => 'float',
             'status_pembayaran' => StatusPembayaran::class,
         ];
     }
@@ -51,6 +54,12 @@ class Pembelian extends Model
     public function petani(): BelongsTo
     {
         return $this->belongsTo(Petani::class);
+    }
+
+    /** @return BelongsTo<Pengepul, $this> */
+    public function pengepul(): BelongsTo
+    {
+        return $this->belongsTo(Pengepul::class);
     }
 
     /** @return BelongsTo<GradeHarga, $this> */

@@ -111,7 +111,8 @@ export interface KaryawanListParams {
 
 export interface KaryawanPayload {
   nama?: string;
-  kontak?: string;
+  /** Opsional — backend menerima kontak kosong (KaryawanRequest: nullable). */
+  kontak?: string | undefined;
   aktif?: boolean;
 }
 

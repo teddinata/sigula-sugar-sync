@@ -13,6 +13,7 @@ use App\Models\GajiMingguan;
 use App\Models\Karyawan;
 use App\Models\ProduksiKaryawan;
 use App\Models\SesiTungku;
+use App\Models\SesiTungkuBahan;
 use App\Models\User;
 use App\Support\Periode;
 use Illuminate\Support\Facades\DB;
@@ -35,65 +36,136 @@ final class ProduksiService
     ) {}
 
     /**
-     * @param array{
+     * @param  array{
      *     tanggal: string,
-     *     grade: Grade,
-     *     kg_bahan_mentah: float,
+     *     bahan?: array<int, array{grade: Grade, kg: float}>,
+     *     grade?: Grade,
+     *     kg_bahan_mentah?: float,
      *     karyawan_1_id: int|string,
-     *     karyawan_2_id: int|string,
+     *     karyawan_2_id?: int|string|null,
      *     kode_tungku?: string|null,
      *     catatan?: string|null
-     * } $data
+     * }  $data
      */
     public function mulai(array $data, ?User $user = null): SesiTungku
     {
-        $kgBahan = round((float) $data['kg_bahan_mentah'], 2);
+        $bahan = $this->normalisasiBahan($data);
+        $kgTotal = round(array_sum(array_column($bahan, 'kg')), 2);
 
-        if ($kgBahan <= 0) {
-            throw BusinessRuleException::untukField('kgBahan', 'Kg bahan mentah harus lebih dari 0.');
-        }
+        $karyawan2Id = $data['karyawan_2_id'] ?? null;
 
-        if ((string) $data['karyawan_1_id'] === (string) $data['karyawan_2_id']) {
+        if ($karyawan2Id !== null && (string) $data['karyawan_1_id'] === (string) $karyawan2Id) {
             throw BusinessRuleException::untukField('karyawan2Id', 'Karyawan 1 dan Karyawan 2 tidak boleh orang yang sama.');
         }
 
-        return DB::transaction(function () use ($data, $kgBahan, $user): SesiTungku {
-            /** @var Grade $grade */
-            $grade = $data['grade'];
+        return DB::transaction(function () use ($data, $bahan, $kgTotal, $karyawan2Id, $user): SesiTungku {
             $tanggal = Periode::tanggal($data['tanggal']);
 
             $karyawan1 = Karyawan::query()->findOrFail($data['karyawan_1_id']);
-            $karyawan2 = Karyawan::query()->findOrFail($data['karyawan_2_id']);
+            $karyawan2 = $karyawan2Id === null ? null : Karyawan::query()->findOrFail($karyawan2Id);
 
-            $this->pastikanBahanCukup($grade, $kgBahan);
+            // Stok tiap grade terpisah, jadi ketersediaannya dicek satu per satu.
+            foreach ($bahan as $baris) {
+                $this->pastikanBahanCukup($baris['grade'], $baris['kg']);
+            }
 
             $sesi = SesiTungku::create([
                 'tanggal' => $tanggal->toDateString(),
                 'kode_tungku' => filled($data['kode_tungku'] ?? null)
                     ? trim((string) $data['kode_tungku'])
                     : $this->nomor->kodeTungku($tanggal),
-                'grade' => $grade->value,
-                'kg_bahan_mentah' => $kgBahan,
+                // Kolom ringkasan: grade utama (baris pertama) & TOTAL seluruh grade.
+                'grade' => $bahan[0]['grade']->value,
+                'kg_bahan_mentah' => $kgTotal,
                 'karyawan_1_id' => $karyawan1->id,
-                'karyawan_2_id' => $karyawan2->id,
+                'karyawan_2_id' => $karyawan2?->id,
                 'status' => StatusSesi::SEDANG_DIPROSES->value,
                 'catatan' => $data['catatan'] ?? null,
                 'user_id' => $user?->getKey(),
             ]);
 
+            foreach ($bahan as $baris) {
+                SesiTungkuBahan::create([
+                    'sesi_tungku_id' => $sesi->id,
+                    'grade' => $baris['grade']->value,
+                    'kg' => $baris['kg'],
+                ]);
+            }
+
+            $rincian = implode(' + ', array_map(
+                static fn (array $b): string => sprintf('%s kg %s', $b['kg'], $b['grade']->label()),
+                $bahan,
+            ));
+
             $this->audit->catat(
                 'produksi.mulai',
                 sprintf(
-                    'Sesi tungku %s dimulai: %s kg %s oleh %s & %s',
-                    $sesi->kode_tungku, $kgBahan, $grade->label(), $karyawan1->nama, $karyawan2->nama
+                    'Sesi tungku %s dimulai: %s oleh %s',
+                    $sesi->kode_tungku,
+                    $rincian,
+                    $karyawan2 === null ? $karyawan1->nama : $karyawan1->nama.' & '.$karyawan2->nama,
                 ),
                 $sesi,
-                ['kg_bahan_mentah' => $kgBahan, 'grade' => $grade->value],
+                [
+                    'bahan' => array_map(
+                        static fn (array $b): array => ['grade' => $b['grade']->value, 'kg' => $b['kg']],
+                        $bahan,
+                    ),
+                    'kg_total' => $kgTotal,
+                ],
                 $user,
             );
 
-            return $sesi->load(['karyawan1', 'karyawan2']);
+            return $sesi->load(['karyawan1', 'karyawan2', 'bahan']);
         });
+    }
+
+    /**
+     * Menyeragamkan input bahan mentah.
+     *
+     * Menerima bentuk baru (`bahan` sebagai array beberapa grade) maupun bentuk
+     * lama (`grade` + `kg_bahan_mentah` tunggal) supaya pemanggil lama —
+     * seeder, perintah artisan, test — tidak perlu ikut diubah.
+     *
+     * @param  array<string, mixed>  $data
+     * @return array<int, array{grade: Grade, kg: float}>
+     */
+    private function normalisasiBahan(array $data): array
+    {
+        $mentah = $data['bahan'] ?? null;
+
+        if ($mentah === null && isset($data['grade'])) {
+            $mentah = [['grade' => $data['grade'], 'kg' => $data['kg_bahan_mentah'] ?? 0]];
+        }
+
+        if (! is_array($mentah) || $mentah === []) {
+            throw BusinessRuleException::untukField('bahan', 'Bahan mentah wajib diisi minimal satu grade.');
+        }
+
+        $hasil = [];
+
+        foreach ($mentah as $baris) {
+            $grade = $baris['grade'] instanceof Grade ? $baris['grade'] : Grade::fromAny($baris['grade']);
+            $kg = round((float) ($baris['kg'] ?? 0), 2);
+
+            if ($kg <= 0) {
+                throw BusinessRuleException::untukField(
+                    'kgBahan',
+                    sprintf('Kg bahan mentah %s harus lebih dari 0.', $grade->label()),
+                );
+            }
+
+            if (isset($hasil[$grade->value])) {
+                throw BusinessRuleException::untukField(
+                    'bahan',
+                    sprintf('Grade %s hanya boleh diisi satu kali dalam satu sesi.', $grade->label()),
+                );
+            }
+
+            $hasil[$grade->value] = ['grade' => $grade, 'kg' => $kg];
+        }
+
+        return array_values($hasil);
     }
 
     /**
@@ -116,6 +188,7 @@ final class ProduksiService
         return DB::transaction(function () use ($sesi, $kgKristal, $kgBrondol, $user): SesiTungku {
             /** @var SesiTungku $terkunci */
             $terkunci = SesiTungku::query()->whereKey($sesi->getKey())->lockForUpdate()->firstOrFail();
+            $terkunci->load('bahan');
 
             if ($terkunci->status === StatusSesi::SELESAI) {
                 throw new BusinessRuleException(sprintf('Sesi tungku %s sudah berstatus selesai.', $terkunci->kode_tungku));
@@ -124,14 +197,9 @@ final class ProduksiService
             $kgBahan = (float) $terkunci->kg_bahan_mentah;
             $totalHasil = round($kgKristal + $kgBrondol, 2);
 
-            // Kekekalan massa: hasil masak tidak mungkin melebihi bahan mentah.
-            if ($totalHasil > $kgBahan) {
-                throw BusinessRuleException::untukField('kgKristal', sprintf(
-                    'Total hasil (%s kg) tidak boleh melebihi bahan mentah (%s kg).',
-                    $totalHasil,
-                    $kgBahan,
-                ));
-            }
+            // Tidak ada batas atas rendemen: di lapangan kadang ditambahkan gula
+            // lain di luar NS1/NS2 yang tidak tercatat, sehingga hasil bisa
+            // melebihi bahan mentah. Persentasenya tetap dihitung & ditampilkan.
 
             $terkunci->kg_kristal_total = $kgKristal;
             $terkunci->kg_brondol_total = $kgBrondol;
@@ -142,14 +210,17 @@ final class ProduksiService
 
             $label = sprintf('tungku %s', $terkunci->kode_tungku);
 
-            $this->stok->keluar(
-                $terkunci->grade->kategoriStok(),
-                $kgBahan,
-                $terkunci->tanggal,
-                'Produksi '.$label,
-                $terkunci,
-                $user,
-            );
+            // Stok tiap grade terpisah, jadi dipotong per baris rincian bahan.
+            foreach ($terkunci->bahan as $baris) {
+                $this->stok->keluar(
+                    $baris->grade->kategoriStok(),
+                    (float) $baris->kg,
+                    $terkunci->tanggal,
+                    'Produksi '.$label,
+                    $terkunci,
+                    $user,
+                );
+            }
 
             if ($kgKristal > 0) {
                 $this->stok->masuk(KategoriStok::KRISTAL, $kgKristal, $terkunci->tanggal, 'Hasil '.$label, $terkunci, $user);
@@ -177,43 +248,54 @@ final class ProduksiService
                 $user,
             );
 
-            return $terkunci->load(['karyawan1', 'karyawan2', 'porsiKaryawan']);
+            return $terkunci->load(['karyawan1', 'karyawan2', 'porsiKaryawan', 'bahan']);
         });
     }
 
     /**
-     * Membagi rata bahan mentah dan hasil ke dua karyawan.
+     * Mencatat porsi hasil tiap karyawan untuk keperluan penggajian.
      *
-     * Porsi kedua dihitung sebagai sisa (total − porsi pertama) supaya jumlah
-     * kedua porsi selalu persis sama dengan total sesi walau angkanya ganjil.
+     * Dua karyawan: dibagi rata. Porsi kedua dihitung sebagai sisa
+     * (total − porsi pertama) supaya jumlah keduanya selalu persis sama dengan
+     * total sesi walau angkanya ganjil.
+     *
+     * Satu karyawan: seluruh hasil menjadi porsinya, tanpa pembagian.
      */
     private function simpanPorsiKaryawan(SesiTungku $sesi): void
     {
         $sesi->porsiKaryawan()->delete();
 
-        $bagi = static function (float $total): array {
-            $pertama = round($total / 2, 2);
+        $bahan = (float) $sesi->kg_bahan_mentah;
+        $kristal = (float) $sesi->kg_kristal_total;
+        $brondol = (float) $sesi->kg_brondol_total;
 
-            return [$pertama, round($total - $pertama, 2)];
-        };
+        if ($sesi->karyawan_2_id === null) {
+            $porsi = [[$sesi->karyawan_1_id, $bahan, $kristal, $brondol]];
+        } else {
+            $bagi = static function (float $total): array {
+                $pertama = round($total / 2, 2);
 
-        [$bahan1, $bahan2] = $bagi((float) $sesi->kg_bahan_mentah);
-        [$kristal1, $kristal2] = $bagi((float) $sesi->kg_kristal_total);
-        [$brondol1, $brondol2] = $bagi((float) $sesi->kg_brondol_total);
+                return [$pertama, round($total - $pertama, 2)];
+            };
 
-        $porsi = [
-            [$sesi->karyawan_1_id, $bahan1, $kristal1, $brondol1],
-            [$sesi->karyawan_2_id, $bahan2, $kristal2, $brondol2],
-        ];
+            [$bahan1, $bahan2] = $bagi($bahan);
+            [$kristal1, $kristal2] = $bagi($kristal);
+            [$brondol1, $brondol2] = $bagi($brondol);
 
-        foreach ($porsi as [$karyawanId, $bahan, $kristal, $brondol]) {
+            $porsi = [
+                [$sesi->karyawan_1_id, $bahan1, $kristal1, $brondol1],
+                [$sesi->karyawan_2_id, $bahan2, $kristal2, $brondol2],
+            ];
+        }
+
+        foreach ($porsi as [$karyawanId, $kgBahan, $kgKristal, $kgBrondol]) {
             ProduksiKaryawan::create([
                 'sesi_tungku_id' => $sesi->id,
                 'karyawan_id' => $karyawanId,
                 'tanggal' => $sesi->tanggal->toDateString(),
-                'kg_bahan_mentah_porsi' => $bahan,
-                'kg_kristal_porsi' => $kristal,
-                'kg_brondol_porsi' => $brondol,
+                'kg_bahan_mentah_porsi' => $kgBahan,
+                'kg_kristal_porsi' => $kgKristal,
+                'kg_brondol_porsi' => $kgBrondol,
             ]);
         }
     }
@@ -228,6 +310,7 @@ final class ProduksiService
         DB::transaction(function () use ($sesi, $user, $alasan): void {
             /** @var SesiTungku $terkunci */
             $terkunci = SesiTungku::query()->whereKey($sesi->getKey())->lockForUpdate()->firstOrFail();
+            $terkunci->load('bahan');
 
             if ($terkunci->status === StatusSesi::SELESAI) {
                 $this->pastikanGajiBelumDibayar($terkunci);
@@ -244,14 +327,16 @@ final class ProduksiService
                     $this->stok->keluar(KategoriStok::BRONDOL, $kgBrondol, $terkunci->tanggal, 'Pembatalan '.$label, $terkunci, $user);
                 }
 
-                $this->stok->masuk(
-                    $terkunci->grade->kategoriStok(),
-                    (float) $terkunci->kg_bahan_mentah,
-                    $terkunci->tanggal,
-                    'Pengembalian bahan '.$label,
-                    $terkunci,
-                    $user,
-                );
+                foreach ($terkunci->bahan as $baris) {
+                    $this->stok->masuk(
+                        $baris->grade->kategoriStok(),
+                        (float) $baris->kg,
+                        $terkunci->tanggal,
+                        'Pengembalian bahan '.$label,
+                        $terkunci,
+                        $user,
+                    );
+                }
 
                 $terkunci->porsiKaryawan()->delete();
             }
@@ -364,7 +449,7 @@ final class ProduksiService
         $periode = Periode::mingguKerja($sesi->tanggal);
 
         $sudahDibayar = GajiMingguan::query()
-            ->whereIn('karyawan_id', [$sesi->karyawan_1_id, $sesi->karyawan_2_id])
+            ->whereIn('karyawan_id', array_filter([$sesi->karyawan_1_id, $sesi->karyawan_2_id]))
             ->whereDate('periode_senin', $periode['senin']->toDateString())
             ->where('status', StatusGaji::SUDAH_DIBAYAR->value)
             ->exists();

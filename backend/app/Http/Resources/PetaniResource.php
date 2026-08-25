@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Resources;
 
+use App\Enums\StatusPenderes;
 use App\Models\Petani;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -22,6 +23,17 @@ class PetaniResource extends JsonResource
             'nomorMember' => $this->nomor_member ?? '',
             'labelMember' => $this->nomor_member ? 'Petani '.$this->nomor_member : '',
             'kontak' => $this->kontak ?? '',
+            'kodeLahan' => $this->kode_lahan,
+            'rtRw' => $this->rt_rw,
+            // Bisa lebih dari satu status, mis. [PMS, PLMD].
+            'statusPenderes' => $this->whenLoaded('statusPenderes', fn (): array => array_map(
+                static fn (StatusPenderes $s): array => [
+                    'kode' => $s->value,
+                    'label' => $s->label(),
+                    'keterangan' => $s->keterangan(),
+                ],
+                $this->daftarStatusPenderes(),
+            )),
             'alamat' => $this->alamat ?? '',
             'totalTransaksi' => $this->whenCounted('pembelian', fn (): int => (int) $this->pembelian_count, 0),
             'totalNilai' => $this->when(

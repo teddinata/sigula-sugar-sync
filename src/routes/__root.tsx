@@ -13,6 +13,7 @@ import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { AuthProvider } from "../store/auth-store";
 import { Toaster } from "../components/ui/sonner";
+import { UpdatePrompt } from "../components/sigula/update-prompt";
 
 function NotFoundComponent() {
   return (
@@ -135,6 +136,9 @@ function RootComponent() {
         {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
         <Outlet />
         <Toaster />
+        {/* Pengingat "versi baru tersedia" — dipasang di root supaya ikut muncul
+            di halaman login, bukan hanya di dalam aplikasi. */}
+        <UpdatePrompt />
       </AuthProvider>
     </QueryClientProvider>
   );

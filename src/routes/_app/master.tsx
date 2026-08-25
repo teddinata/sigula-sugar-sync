@@ -23,11 +23,18 @@ import {
   SearchInput,
   type Column,
 } from "@/components/sigula/ui-bits";
-import { rupiah, tanggalID } from "@/lib/format";
+import { angka, rupiah, tanggalID } from "@/lib/format";
 import { GRADES, type Grade } from "@/lib/sigula-types";
 import { todayISO } from "@/lib/sigula-seed";
 import { ApiError } from "@/lib/api-client";
 import type { Eksportir, Karyawan, RiwayatHarga, RiwayatTarif, TarifKey } from "@/lib/api/master";
+import type { Pengepul } from "@/lib/api/pengepul";
+import {
+  useHapusPengepul,
+  usePengepulList,
+  useTambahPengepul,
+  useUbahPengepul,
+} from "@/hooks/use-pengepul";
 import {
   useEksportirList,
   useHapusEksportir,
@@ -206,6 +213,104 @@ function MasterPage() {
     },
   ];
 
+  // ---- Pengepul ---------------------------------------------------------------
+  const [qPengepul, setQPengepul] = useState("");
+  const [qPengepulDebounced, setQPengepulDebounced] = useState("");
+  const [sertakanNonaktifPengepul, setSertakanNonaktifPengepul] = useState(false);
+
+  useEffect(() => {
+    const t = setTimeout(() => setQPengepulDebounced(qPengepul.trim()), 300);
+    return () => clearTimeout(t);
+  }, [qPengepul]);
+
+  const { data: pengepulList = [], isLoading: pengepulLoading } = usePengepulList({
+    q: qPengepulDebounced || undefined,
+    sertakanNonaktif: sertakanNonaktifPengepul,
+  });
+  const tambahPengepul = useTambahPengepul();
+  const ubahPengepul = useUbahPengepul();
+  const hapusPengepul = useHapusPengepul();
+
+  const [pForm, setPForm] = useState({ nama: "", kontak: "" });
+
+  const submitPengepul = async () => {
+    if (!pForm.nama.trim()) {
+      toast.error("Nama pengepul wajib diisi");
+      return;
+    }
+    try {
+      await tambahPengepul.mutateAsync({
+        nama: pForm.nama.trim(),
+        kontak: pForm.kontak.trim() || undefined,
+      });
+      toast.success("Pengepul ditambahkan", { description: pForm.nama });
+      setPForm({ nama: "", kontak: "" });
+    } catch (err) {
+      toast.error(apiErrorMessage(err, "Gagal menambah pengepul."));
+    }
+  };
+
+  const toggleAktifPengepul = async (p: Pengepul) => {
+    try {
+      await ubahPengepul.mutateAsync({ id: p.id, payload: { aktif: !p.aktif } });
+      toast.success(p.aktif ? "Pengepul dinonaktifkan" : "Pengepul diaktifkan kembali", {
+        description: p.nama,
+      });
+    } catch (err) {
+      toast.error(apiErrorMessage(err, "Gagal mengubah status pengepul."));
+    }
+  };
+
+  const hapusPengepulHandler = async (p: Pengepul) => {
+    try {
+      const res = await hapusPengepul.mutateAsync(p.id);
+      toast.success(res.message, { description: p.nama });
+    } catch (err) {
+      toast.error(apiErrorMessage(err, "Gagal menghapus pengepul."));
+    }
+  };
+
+  const pengepulCols: Column<Pengepul>[] = [
+    { key: "nama", header: "Nama Pengepul", sortValue: (r) => r.nama, cell: (r) => r.nama },
+    { key: "kontak", header: "Kontak", cell: (r) => r.kontak || "-" },
+    {
+      key: "trx",
+      header: "Transaksi",
+      align: "right",
+      cell: (r) => angka(r.totalTransaksi ?? 0),
+    },
+    {
+      key: "status",
+      header: "Status",
+      cell: (r) =>
+        r.aktif ? (
+          <Badge className="bg-success/15 text-success hover:bg-success/15">Aktif</Badge>
+        ) : (
+          <Badge variant="secondary">Nonaktif</Badge>
+        ),
+    },
+    {
+      key: "aksi",
+      header: "Aksi",
+      align: "right",
+      cell: (r) => (
+        <div className="flex justify-end gap-1">
+          <Button variant="ghost" size="sm" onClick={() => toggleAktifPengepul(r)}>
+            {r.aktif ? "Nonaktifkan" : "Aktifkan"}
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label="Hapus pengepul"
+            onClick={() => hapusPengepulHandler(r)}
+          >
+            <Trash2 className="size-4 text-destructive" />
+          </Button>
+        </div>
+      ),
+    },
+  ];
+
   // ---- Karyawan ---------------------------------------------------------------
   const [qKaryawan, setQKaryawan] = useState("");
   const [qKaryawanDebounced, setQKaryawanDebounced] = useState("");
@@ -227,12 +332,16 @@ function MasterPage() {
   const [kForm, setKForm] = useState({ nama: "", kontak: "" });
 
   const submitKaryawan = async () => {
-    if (!kForm.nama.trim() || !kForm.kontak.trim()) {
-      toast.error("Nama dan kontak karyawan wajib diisi");
+    if (!kForm.nama.trim()) {
+      toast.error("Nama karyawan wajib diisi");
       return;
     }
     try {
-      await tambahKaryawan.mutateAsync({ nama: kForm.nama.trim(), kontak: kForm.kontak.trim() });
+      // Kontak opsional — banyak karyawan client tidak punya nomor terdaftar.
+      await tambahKaryawan.mutateAsync({
+        nama: kForm.nama.trim(),
+        kontak: kForm.kontak.trim() || undefined,
+      });
       toast.success("Karyawan ditambahkan", { description: kForm.nama });
       setKForm({ nama: "", kontak: "" });
     } catch (err) {
@@ -391,6 +500,7 @@ function MasterPage() {
           <TabsTrigger value="harga">Harga Beli per Grade</TabsTrigger>
           <TabsTrigger value="tarif">Tarif Produksi</TabsTrigger>
           <TabsTrigger value="data">Karyawan & Eksportir</TabsTrigger>
+          <TabsTrigger value="pengepul">Pengepul</TabsTrigger>
         </TabsList>
 
         <TabsContent value="harga" className="space-y-4">
@@ -517,6 +627,75 @@ function MasterPage() {
               );
             })}
           </div>
+        </TabsContent>
+
+        <TabsContent value="pengepul" className="space-y-4">
+          <Card className="overflow-hidden shadow-card">
+            <CardHeader>
+              <CardTitle className="text-base">Data Pengepul ({pengepulList.length})</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4 px-0">
+              <div className="flex flex-wrap items-center gap-3 px-4">
+                <SearchInput
+                  value={qPengepul}
+                  onChange={setQPengepul}
+                  placeholder="Cari nama pengepul…"
+                  className="flex-1"
+                />
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Switch
+                    id="nonaktif-pengepul"
+                    checked={sertakanNonaktifPengepul}
+                    onCheckedChange={setSertakanNonaktifPengepul}
+                  />
+                  <Label htmlFor="nonaktif-pengepul" className="cursor-pointer font-normal">
+                    Tampilkan nonaktif
+                  </Label>
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-2 px-4">
+                <Input
+                  placeholder="Nama pengepul"
+                  value={pForm.nama}
+                  onChange={(e) => setPForm({ ...pForm, nama: e.target.value })}
+                  className="flex-1"
+                />
+                <Input
+                  placeholder="Kontak (opsional)"
+                  value={pForm.kontak}
+                  onChange={(e) => setPForm({ ...pForm, kontak: e.target.value })}
+                  className="flex-1"
+                />
+                <Button onClick={submitPengepul} disabled={tambahPengepul.isPending}>
+                  {tambahPengepul.isPending ? (
+                    <Loader2 className="size-4 animate-spin" />
+                  ) : (
+                    <Plus className="size-4" />
+                  )}
+                </Button>
+              </div>
+              <p className="px-4 text-xs text-muted-foreground">
+                Pengepul yang sudah punya transaksi tidak dihapus, hanya dinonaktifkan, supaya
+                riwayat pembelian tetap utuh.
+              </p>
+              {pengepulLoading ? (
+                <LoadingRow />
+              ) : (
+                <DataTable
+                  rows={pengepulList}
+                  columns={pengepulCols}
+                  rowKey={(r) => r.id}
+                  initialSort={{ key: "nama", dir: "asc" }}
+                  empty={
+                    <EmptyState
+                      title="Belum ada pengepul"
+                      description="Tambahkan pengepul pertama lewat form di atas."
+                    />
+                  }
+                />
+              )}
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="data" className="grid gap-4 lg:grid-cols-2">

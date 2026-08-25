@@ -27,7 +27,7 @@ class SesiTungkuController extends Controller
         $status = $request->filled('status') ? StatusSesi::tryFromAny($request->input('status')) : null;
 
         $rows = SesiTungku::query()
-            ->with(['karyawan1', 'karyawan2'])
+            ->with(['karyawan1', 'karyawan2', 'bahan'])
             ->when($request->filled('tanggal'), fn ($query) => $query->whereDate('tanggal', $request->input('tanggal')))
             ->rentang($request->input('dari'), $request->input('sampai'))
             ->when($status !== null, fn ($query) => $query->where('status', $status->value))
@@ -67,7 +67,7 @@ class SesiTungkuController extends Controller
 
     public function show(SesiTungku $sesi): SesiTungkuResource
     {
-        $sesi->load(['karyawan1', 'karyawan2', 'porsiKaryawan']);
+        $sesi->load(['karyawan1', 'karyawan2', 'bahan', 'porsiKaryawan']);
 
         return new SesiTungkuResource($sesi);
     }

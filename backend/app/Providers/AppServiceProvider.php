@@ -13,9 +13,12 @@ use App\Models\Karyawan;
 use App\Models\Pembelian;
 use App\Models\Penjualan;
 use App\Models\PenjualanItem;
+use App\Models\Pengepul;
 use App\Models\Petani;
+use App\Models\PetaniStatus;
 use App\Models\ProduksiKaryawan;
 use App\Models\SesiTungku;
+use App\Models\SesiTungkuBahan;
 use App\Models\TarifUpah;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
@@ -48,6 +51,9 @@ class AppServiceProvider extends ServiceProvider
             'gaji_mingguan' => GajiMingguan::class,
             'biaya_operasional' => BiayaOperasional::class,
             'kartu_stok' => KartuStok::class,
+            'pengepul' => Pengepul::class,
+            'petani_status' => PetaniStatus::class,
+            'sesi_tungku_bahan' => SesiTungkuBahan::class,
         ]);
 
         // Di luar production, N+1 query dan atribut asing dianggap error supaya

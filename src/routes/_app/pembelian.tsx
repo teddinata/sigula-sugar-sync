@@ -24,6 +24,7 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { PrintDialog, PrintRow } from "@/components/sigula/print-dialog";
+import { BarisThermal, GarisThermal, JudulThermal } from "@/components/sigula/thermal-print";
 import {
   DataTable,
   EmptyState,
@@ -31,7 +32,7 @@ import {
   StatCard,
   type Column,
 } from "@/components/sigula/ui-bits";
-import { angka, rupiah, tanggalPendek } from "@/lib/format";
+import { angka, bulatkanKeLimaRatus, rupiah, tanggalPendek } from "@/lib/format";
 import { GRADES, type Grade } from "@/lib/sigula-types";
 import { todayISO } from "@/lib/sigula-seed";
 import { ApiError } from "@/lib/api-client";
@@ -39,6 +40,7 @@ import { getPembelian, type Pembelian, type PembelianKwitansi } from "@/lib/api/
 import { useBatalkanPembelian, usePembelianList, useTambahPembelian } from "@/hooks/use-pembelian";
 import { useHargaBeli } from "@/hooks/use-master-data";
 import { usePetaniList } from "@/hooks/use-petani";
+import { usePengepulList } from "@/hooks/use-pengepul";
 
 export const Route = createFileRoute("/_app/pembelian")({
   head: () => ({
@@ -121,9 +123,44 @@ function PetaniPicker({
   );
 }
 
+/** Radix Select melarang value string kosong; ini sentinel "tanpa pengepul". */
+const TANPA_PENGEPUL = "__langsung__";
+
+function PengepulPicker({
+  value,
+  onChange,
+  allOptionLabel,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  allOptionLabel?: string;
+}) {
+  const { data: pengepulList = [] } = usePengepulList();
+
+  return (
+    <Select value={value || TANPA_PENGEPUL} onValueChange={onChange}>
+      <SelectTrigger>
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value={TANPA_PENGEPUL}>
+          {allOptionLabel ?? "Tanpa pengepul (beli langsung)"}
+        </SelectItem>
+        {pengepulList.map((p) => (
+          <SelectItem key={p.id} value={p.id}>
+            {p.nama}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+}
+
 interface FormState {
   tanggal: string;
   petaniId: string;
+  /** Kosong = beli langsung dari petani tanpa perantara. */
+  pengepulId: string;
   grade: Grade;
   kg: string;
   hargaManual: boolean;
@@ -138,6 +175,8 @@ function PembelianPage() {
   const [sampai, setSampai] = useState("");
   const [fGrade, setFGrade] = useState<"semua" | Grade>("semua");
   const [fPetaniId, setFPetaniId] = useState("semua");
+  // "semua" | "langsung" (tanpa pengepul) | "lewat" (via pengepul)
+  const [fPengepul, setFPengepul] = useState("semua");
   const [page, setPage] = useState(1);
 
   useEffect(() => {
@@ -147,7 +186,7 @@ function PembelianPage() {
 
   useEffect(() => {
     setPage(1);
-  }, [qDebounced, dari, sampai, fGrade, fPetaniId]);
+  }, [qDebounced, dari, sampai, fGrade, fPetaniId, fPengepul]);
 
   const {
     data: listResult,
@@ -158,6 +197,7 @@ function PembelianPage() {
     sampai: sampai || undefined,
     grade: fGrade === "semua" ? undefined : fGrade,
     petaniId: fPetaniId === "semua" ? undefined : fPetaniId,
+    punyaPengepul: fPengepul === "semua" ? undefined : fPengepul === "lewat",
     q: qDebounced || undefined,
     page,
     perPage: PER_PAGE,
@@ -166,13 +206,16 @@ function PembelianPage() {
   const rows = listResult?.data ?? [];
   const meta = listResult?.meta;
   const ringkasan = listResult?.ringkasan;
-  const filterAktif = Boolean(dari || sampai || fGrade !== "semua" || fPetaniId !== "semua" || q);
+  const filterAktif = Boolean(
+    dari || sampai || fGrade !== "semua" || fPetaniId !== "semua" || fPengepul !== "semua" || q,
+  );
 
   const resetFilter = () => {
     setDari("");
     setSampai("");
     setFGrade("semua");
     setFPetaniId("semua");
+    setFPengepul("semua");
     setQ("");
   };
 
@@ -185,6 +228,7 @@ function PembelianPage() {
   const [form, setForm] = useState<FormState>({
     tanggal: todayISO(),
     petaniId: "",
+    pengepulId: "",
     grade: "NS 1",
     kg: "",
     hargaManual: false,
@@ -196,11 +240,13 @@ function PembelianPage() {
   const hargaMaster = hargaData?.hargaBeli[form.grade] ?? null;
   const hargaEfektif = form.hargaManual ? Number(form.harga) || 0 : (hargaMaster ?? 0);
   const totalPreview = (Number(form.kg) || 0) * hargaEfektif;
+  const totalPreviewBulat = bulatkanKeLimaRatus(totalPreview);
 
   const buka = () => {
     setForm({
       tanggal: todayISO(),
       petaniId: "",
+      pengepulId: "",
       grade: "NS 1",
       kg: "",
       hargaManual: false,
@@ -233,6 +279,7 @@ function PembelianPage() {
       const res = await tambahPembelian.mutateAsync({
         tanggal: form.tanggal,
         petaniId: form.petaniId,
+        pengepulId: form.pengepulId || undefined,
         grade: form.grade,
         kg: kgNum,
         harga: hargaPayload,
@@ -292,7 +339,12 @@ function PembelianPage() {
     {
       key: "petani",
       header: "Nama Petani",
-      cell: (r) => <span className="font-medium">{r.namaPetani ?? "-"}</span>,
+      cell: (r) => (
+        <div>
+          <p className="font-medium">{r.namaPetani ?? "-"}</p>
+          {r.pengepul && <p className="text-xs text-muted-foreground">via {r.pengepul.nama}</p>}
+        </div>
+      ),
     },
     {
       key: "grade",
@@ -305,7 +357,17 @@ function PembelianPage() {
       key: "total",
       header: "Total Bayar",
       align: "right",
-      cell: (r) => <span className="font-semibold">{rupiah(r.total)}</span>,
+      cell: (r) => (
+        <div>
+          <span className="font-semibold">{rupiah(r.total)}</span>
+          {/* Hanya ditampilkan bila pembulatan benar-benar mengubah nominal. */}
+          {r.totalSebelumBulat !== null && r.totalSebelumBulat !== r.total && (
+            <p className="text-xs text-muted-foreground line-through">
+              {rupiah(r.totalSebelumBulat)}
+            </p>
+          )}
+        </div>
+      ),
     },
     {
       key: "status",
@@ -432,6 +494,19 @@ function PembelianPage() {
                 allOptionLabel="Semua Petani"
               />
             </div>
+            <div className="w-[200px] space-y-1">
+              <Label className="text-xs">Pengepul</Label>
+              <Select value={fPengepul} onValueChange={setFPengepul}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="semua">Semua</SelectItem>
+                  <SelectItem value="langsung">Beli langsung (tanpa pengepul)</SelectItem>
+                  <SelectItem value="lewat">Lewat pengepul</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
             {filterAktif && (
               <Button variant="ghost" onClick={resetFilter}>
                 Reset filter
@@ -520,6 +595,16 @@ function PembelianPage() {
                 placeholder="Pilih petani"
               />
             </div>
+            <div className="space-y-2">
+              <Label>Pengepul (opsional)</Label>
+              <PengepulPicker
+                value={form.pengepulId}
+                onChange={(v) => setForm({ ...form, pengepulId: v === TANPA_PENGEPUL ? "" : v })}
+              />
+              <p className="text-xs text-muted-foreground">
+                Isi bila bahan dibeli lewat perantara. Kosongkan bila langsung dari petani.
+              </p>
+            </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label>Grade</Label>
@@ -587,9 +672,12 @@ function PembelianPage() {
               <p className="text-xs uppercase tracking-wide text-muted-foreground">
                 Estimasi Total Bayar
               </p>
-              <p className="text-2xl font-semibold">{rupiah(totalPreview)}</p>
+              <p className="text-2xl font-semibold">{rupiah(totalPreviewBulat)}</p>
               <p className="text-xs text-muted-foreground">
                 {angka(Number(form.kg) || 0)} kg × {rupiah(hargaEfektif)}
+                {totalPreviewBulat !== totalPreview
+                  ? ` = ${rupiah(totalPreview)}, dibulatkan ke kelipatan 500`
+                  : ""}
               </p>
             </div>
             {err && <p className="text-sm text-destructive">{err}</p>}
@@ -659,6 +747,31 @@ function PembelianPage() {
         open={struk !== null}
         onOpenChange={(v) => !v && setStruk(null)}
         title="Kwitansi Pembelian"
+        thermal={
+          struk && (
+            <>
+              <JudulThermal judul="PT Nira Sari Murni" subjudul="Kwitansi Pembelian Bahan" />
+              <GarisThermal />
+              <BarisThermal label="No" value={struk.nomor} />
+              <BarisThermal label="Tgl" value={struk.tanggal} />
+              <BarisThermal label="Petani" value={struk.namaPetani ?? "-"} />
+              <BarisThermal label="Member" value={struk.nomorMember} />
+              {struk.namaPengepul && <BarisThermal label="Pengepul" value={struk.namaPengepul} />}
+              <GarisThermal />
+              <BarisThermal label="Grade" value={struk.grade} />
+              <BarisThermal label="Berat" value={`${angka(struk.kilogram)} kg`} />
+              <BarisThermal label="Harga/kg" value={rupiah(struk.hargaPerKg)} />
+              {struk.totalSebelumBulat !== null && struk.totalSebelumBulat !== struk.total && (
+                <BarisThermal label="Subtotal" value={rupiah(struk.totalSebelumBulat)} />
+              )}
+              <GarisThermal />
+              <BarisThermal label="TOTAL" value={rupiah(struk.total)} tebal />
+              <BarisThermal label="Status" value={struk.statusPembayaran.toUpperCase()} />
+              <GarisThermal />
+              <p className="mt-1 text-center text-[10px]">Terima kasih</p>
+            </>
+          )
+        }
       >
         {struk && (
           <div>
@@ -668,10 +781,14 @@ function PembelianPage() {
             <PrintRow label="Diterima dari" value="PT Nira Sari Murni" />
             <PrintRow label="Dibayarkan kepada" value={struk.namaPetani ?? "-"} />
             <PrintRow label="Nomor Member" value={struk.nomorMember} />
+            {struk.namaPengepul && <PrintRow label="Melalui pengepul" value={struk.namaPengepul} />}
             <PrintRow label="Grade bahan" value={struk.grade} />
             <PrintRow label="Kilogram" value={`${angka(struk.kilogram)} kg`} />
             <PrintRow label="Harga per kg" value={rupiah(struk.hargaPerKg)} />
             <div className="mt-2 border-t pt-2">
+              {struk.totalSebelumBulat !== null && struk.totalSebelumBulat !== struk.total && (
+                <PrintRow label="Subtotal" value={rupiah(struk.totalSebelumBulat)} />
+              )}
               <PrintRow label="Total dibayar" value={rupiah(struk.total)} strong />
             </div>
             <PrintRow label="Status" value={struk.statusPembayaran.toUpperCase()} />

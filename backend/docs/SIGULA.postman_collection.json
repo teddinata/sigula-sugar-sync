@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "5163d1a0-9b2c-4f7e-a1d3-si6ula20260813",
     "name": "SIGULA API v1 — PT Nira Sari Murni",
-    "description": "Koleksi lengkap 58 endpoint SIGULA (Sistem Informasi Gula Terintegrasi).\n\n## Cara pakai\n\n1. Import file ini + `SIGULA.postman_environment.json`, pilih environment **SIGULA — Lokal**.\n2. Jalankan **Autentikasi → Login**. Token otomatis tersimpan ke variable `token`, jadi semua request lain langsung terautentikasi.\n3. Request bertanda ⭐ menyimpan id hasilnya ke collection variable (`petaniId`, `sesiId`, dst) sehingga folder bisa dijalankan berurutan lewat **Runner**.\n\nSeluruh koleksi aman dijalankan sekaligus lewat **Runner** — request Logout ditaruh di folder terakhir.\n\nVariable `{{tanggalHariIni}}` diisi otomatis (YYYY-MM-DD) oleh pre-request script koleksi, jadi contoh body selalu memakai tanggal hari ini.\n\n## Konvensi\n\n- Auth: `Authorization: Bearer <token>` (Sanctum), diatur di level koleksi.\n- Sukses: `{ \"data\": ..., \"message\": \"...\" }`. Endpoint transaksi berpaginasi menambah `meta`.\n- Error **422** (validasi maupun aturan bisnis) selalu sama bentuknya:\n  `{ \"message\": \"...\", \"errors\": { \"field\": [\"...\"] } }`\n- **401** token tidak valid · **403** role tidak berhak · **429** rate limit login (10/menit).\n- Enum menerima label (`\"NS 1\"`) maupun kode (`\"ns1\"`); response mengirim keduanya (`grade` + `gradeKode`).\n\n## Akun seeder\n\n| Email | Role |\n|---|---|\n| owner@nirasarimurni.com | Owner (semua modul) |\n| gudang@nirasarimurni.com | Staff Gudang (petani, pembelian, stok) |\n| produksi@nirasarimurni.com | Staff Produksi (sesi tungku) |\n\nPassword default: `password`.",
+    "description": "Koleksi lengkap 63 endpoint SIGULA (Sistem Informasi Gula Terintegrasi).\n\n## Cara pakai\n\n1. Import file ini + `SIGULA.postman_environment.json`, pilih environment **SIGULA — Lokal**.\n2. Jalankan **Autentikasi → Login**. Token otomatis tersimpan ke variable `token`, jadi semua request lain langsung terautentikasi.\n3. Request bertanda ⭐ menyimpan id hasilnya ke collection variable (`petaniId`, `sesiId`, dst) sehingga folder bisa dijalankan berurutan lewat **Runner**.\n\nSeluruh koleksi aman dijalankan sekaligus lewat **Runner** — request Logout ditaruh di folder terakhir.\n\nVariable `{{tanggalHariIni}}` diisi otomatis (YYYY-MM-DD) oleh pre-request script koleksi, jadi contoh body selalu memakai tanggal hari ini.\n\n## Konvensi\n\n- Auth: `Authorization: Bearer <token>` (Sanctum), diatur di level koleksi.\n- Sukses: `{ \"data\": ..., \"message\": \"...\" }`. Endpoint transaksi berpaginasi menambah `meta`.\n- Error **422** (validasi maupun aturan bisnis) selalu sama bentuknya:\n  `{ \"message\": \"...\", \"errors\": { \"field\": [\"...\"] } }`\n- **401** token tidak valid · **403** role tidak berhak · **429** rate limit login (10/menit).\n- Enum menerima label (`\"NS 1\"`) maupun kode (`\"ns1\"`); response mengirim keduanya (`grade` + `gradeKode`).\n\n## Akun seeder\n\n| Email | Role |\n|---|---|\n| owner@nirasarimurni.com | Owner (semua modul) |\n| gudang@nirasarimurni.com | Staff Gudang (petani, pembelian, stok) |\n| produksi@nirasarimurni.com | Staff Produksi (sesi tungku) |\n\nPassword default: `password`.\n\n## Perubahan v1.1.0\n\n- Petani bisa punya lebih dari satu status penderes (`statusPenderes`), plus `kodeLahan` & `rtRw`.\n- Modul **Pengepul** baru; pembelian bisa dicatat lewat perantara (`pengepulId`).\n- Sesi tungku menerima beberapa grade sekaligus (`bahan[]`) dan boleh dikerjakan satu karyawan.\n- Batas atas rendemen dihapus — hasil boleh melebihi bahan mentah.\n- Total pembelian & gaji dibulatkan ke kelipatan 500; nilai aslinya tetap dikirim sebagai `totalSebelumBulat`.\n- Endpoint publik `GET /api/v1/versi` untuk deteksi rilis baru di frontend.\n",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -27,347 +27,1050 @@
           "pm.collectionVariables.set('tanggalHariIni', `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`);"
         ]
       }
-    "info": {
-        "_postman_id": "5163d1a0-9b2c-4f7e-a1d3-si6ula20260813",
-        "name": "SIGULA API v1 — PT Nira Sari Murni",
-        "description": "Koleksi lengkap 50 endpoint SIGULA (Sistem Informasi Gula Terintegrasi).\n\n## Cara pakai\n\n1. Import file ini + `SIGULA.postman_environment.json`, pilih environment **SIGULA — Lokal**.\n2. Jalankan **Autentikasi → Login**. Token otomatis tersimpan ke variable `token`, jadi semua request lain langsung terautentikasi.\n3. Request bertanda ⭐ menyimpan id hasilnya ke collection variable (`petaniId`, `sesiId`, dst) sehingga folder bisa dijalankan berurutan lewat **Runner**.\n\nSeluruh koleksi aman dijalankan sekaligus lewat **Runner** — request Logout ditaruh di folder terakhir.\n\nVariable `{{tanggalHariIni}}` diisi otomatis (YYYY-MM-DD) oleh pre-request script koleksi, jadi contoh body selalu memakai tanggal hari ini.\n\n## Konvensi\n\n- Auth: `Authorization: Bearer <token>` (Sanctum), diatur di level koleksi.\n- Sukses: `{ \"data\": ..., \"message\": \"...\" }`. Endpoint transaksi berpaginasi menambah `meta`.\n- Error **422** (validasi maupun aturan bisnis) selalu sama bentuknya:\n  `{ \"message\": \"...\", \"errors\": { \"field\": [\"...\"] } }`\n- **401** token tidak valid · **403** role tidak berhak · **429** rate limit login (10/menit).\n- Enum menerima label (`\"NS 1\"`) maupun kode (`\"ns1\"`); response mengirim keduanya (`grade` + `gradeKode`).\n\n## Akun seeder\n\n| Email | Role |\n|---|---|\n| owner@nirasarimurni.com | Owner (semua modul) |\n| gudang@nirasarimurni.com | Staff Gudang (petani, pembelian, stok) |\n| produksi@nirasarimurni.com | Staff Produksi (sesi tungku) |\n\nPassword default: `password`.",
-        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
     },
-    "auth": {
-        "type": "bearer",
-        "bearer": [
-            {
-                "key": "token",
-                "value": "{{token}}",
-                "type": "string"
-            }
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Pemeriksaan umum untuk semua request.",
+          "pm.test('Bukan error server (5xx)', () => pm.expect(pm.response.code).to.be.below(500));",
+          "",
+          "if (pm.response.code === 401) {",
+          "    console.warn('Token kosong/kedaluwarsa — jalankan ulang request Login.');",
+          "}",
+          "",
+          "if (pm.response.code === 403) {",
+          "    console.warn('Role akun ini tidak punya akses ke modul tersebut.');",
+          "}"
         ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8000/api/v1",
+      "type": "string"
     },
-    "event": [
+    {
+      "key": "token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "tanggalHariIni",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "petaniId",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "karyawanId",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "karyawanId2",
+      "value": "2",
+      "type": "string"
+    },
+    {
+      "key": "eksportirId",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "pembelianId",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "sesiId",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "penjualanId",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "biayaId",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "pengepulId",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "0. Versi Aplikasi",
+      "item": [
         {
-            "listen": "prerequest",
-            "script": {
+          "name": "Info versi (publik)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/versi",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "versi"
+              ]
+            },
+            "description": "Tanpa autentikasi. Dipakai frontend untuk mendeteksi rilis baru dan menandai update wajib lewat `minimalWeb`.",
+            "auth": {
+              "type": "noauth"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "1. Autentikasi",
+      "description": "Login berbasis token Sanctum. Frontend menyimpan token (bukan session), jadi tidak perlu CSRF cookie.\n\nRequest **Logout** sengaja ditaruh di folder terakhir supaya menjalankan seluruh koleksi lewat Runner tidak mencabut token di tengah jalan.",
+      "item": [
+        {
+          "name": "⭐ Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
                 "type": "text/javascript",
                 "exec": [
-                    "// Mengisi {{tanggalHariIni}} supaya contoh body selalu memakai tanggal hari ini.",
-                    "const d = new Date();",
-                    "const pad = (n) => String(n).padStart(2, '0');",
-                    "pm.collectionVariables.set('tanggalHariIni', `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`);"
+                  "pm.test('Login berhasil', () => pm.response.to.have.status(200));",
+                  "",
+                  "const res = pm.response.json();",
+                  "",
+                  "if (res.data && res.data.token) {",
+                  "    pm.collectionVariables.set('token', res.data.token);",
+                  "    console.log('Token tersimpan. Role:', res.data.user.role);",
+                  "    pm.test('Token diterima', () => pm.expect(res.data.token).to.be.a('string'));",
+                  "}"
                 ]
+              }
             }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"owner@nirasarimurni.com\",\n  \"password\": \"password\",\n  \"namaPerangkat\": \"postman\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "description": "Menukar email + password dengan token Sanctum.\n\n**Body**\n\n| Field | Wajib | Keterangan |\n|---|---|---|\n| `email` | ya | |\n| `password` | ya | |\n| `namaPerangkat` | tidak | Label token, default `sigula-web` |\n\n**Response 200**\n\n```json\n{\n  \"message\": \"Berhasil masuk.\",\n  \"data\": {\n    \"token\": \"1|xxxxx\",\n    \"user\": {\n      \"id\": \"1\", \"nama\": \"Shoffal (Owner)\", \"role\": \"owner\",\n      \"menu\": [\"dashboard\",\"petani\",\"master\",\"pembelian\",\"stok\",\"produksi\",\"penggajian\",\"penjualan\",\"keuangan\"],\n      \"abilities\": [\"lihat-dashboard\", \"...\"]\n    }\n  }\n}\n```\n\n`menu` dipakai frontend untuk menyusun sidebar sesuai role.\n\n**422** bila kredensial salah atau akun dinonaktifkan. **429** setelah 10 percobaan/menit."
+          },
+          "response": []
         },
         {
-            "listen": "test",
-            "script": {
+          "name": "Profil user (me)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "me"
+              ]
+            },
+            "description": "Mengembalikan profil user yang sedang login beserta `menu` dan `abilities` sesuai role."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "2. Dashboard",
+      "item": [
+        {
+          "name": "Ringkasan dashboard",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/dashboard",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "dashboard"
+              ]
+            },
+            "description": "Ringkasan operasional hari ini.\n\nBlok `keuangan` dan `tren` **hanya muncul untuk Owner** — Staff Gudang & Produksi tidak menerima angka laba sama sekali.\n\n**Response 200 (ringkas)**\n\n```json\n{\n  \"data\": {\n    \"tanggal\": \"2026-08-13\",\n    \"stok\": {\n      \"bahanMentah\": { \"NS 1\": 1886, \"NS 2\": 1978, \"Kecap\": 2014, \"total\": 5878 },\n      \"kristal\": 4075.2, \"brondol\": 912.67\n    },\n    \"produksiHariIni\": {\n      \"jumlahSesi\": 14, \"tungkuAktif\": 4, \"kgBahan\": 1755,\n      \"kgKristal\": 997.19, \"kgBrondol\": 204.18,\n      \"totalProduksi\": 1201.37, \"rendemen\": 93.42\n    },\n    \"rendemenBulanIni\": 93.26,\n    \"keuangan\": { \"pendapatanBulanIni\": 322639265, \"labaBulanIni\": 103495883.5, \"margin\": 32.08 },\n    \"tren\": [ { \"bulan\": \"2026-03\", \"label\": \"Mar 26\", \"pendapatan\": 702481372, \"laba\": 255610209.5 } ],\n    \"aktivitasTerbaru\": [ { \"modul\": \"Pembelian\", \"keterangan\": \"Sukirman — NS 1 350 kg\", \"nilai\": \"Rp 5.075.000\" } ]\n  }\n}\n```"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "3. Data Petani",
+      "item": [
+        {
+          "name": "Daftar petani",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/petani?q=&statusPenderes=pms,plmd",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "petani"
+              ],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "",
+                  "description": "Cari nama / nomor member / kontak"
+                },
+                {
+                  "key": "statusPenderes",
+                  "value": "pms,plmd"
+                }
+              ]
+            },
+            "description": "Filter `statusPenderes` menerima beberapa kode dipisah koma; petani yang punya salah satunya akan tampil."
+          },
+          "response": []
+        },
+        {
+          "name": "⭐ Tambah petani",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
                 "type": "text/javascript",
                 "exec": [
-                    "// Pemeriksaan umum untuk semua request.",
-                    "pm.test('Bukan error server (5xx)', () => pm.expect(pm.response.code).to.be.below(500));",
-                    "",
-                    "if (pm.response.code === 401) {",
-                    "    console.warn('Token kosong/kedaluwarsa — jalankan ulang request Login.');",
-                    "}",
-                    "",
-                    "if (pm.response.code === 403) {",
-                    "    console.warn('Role akun ini tidak punya akses ke modul tersebut.');",
-                    "}"
+                  "if (pm.response.code === 201) {",
+                  "    pm.collectionVariables.set('petaniId', pm.response.json().data.id);",
+                  "}"
                 ]
+              }
             }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nama\": \"Sukirman\",\n  \"status\": \"Member\",\n  \"kontak\": \"0812-3456-7890\",\n  \"alamat\": \"Batuanten, Cilongok\",\n  \"kodeLahan\": \"BTN-014\",\n  \"rtRw\": \"02/05\",\n  \"statusPenderes\": [\n    \"PMS\",\n    \"PLMD\"\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/petani",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "petani"
+              ]
+            },
+            "description": "`statusPenderes` boleh berisi lebih dari satu kode (mis. PMS + PLMD). Kode yang diterima: pms, pmms, plmr, plmd, pls, pl, pm — huruf besar/kecil bebas.\n\n`kodeLahan` unik antar petani. Nomor member digenerate backend, jangan dikirim."
+          },
+          "response": []
+        },
+        {
+          "name": "Detail petani",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/petani/{{petaniId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "petani",
+                "{{petaniId}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Ubah petani",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nama\": \"Sukirman\",\n  \"status\": \"Member\",\n  \"statusPenderes\": [\n    \"pms\"\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/petani/{{petaniId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "petani",
+                "{{petaniId}}"
+              ]
+            },
+            "description": "`statusPenderes` bersifat PENGGANTI, bukan tambahan: status yang tidak ikut dikirim akan dihapus. Kirim array kosong untuk menghapus semua status."
+          },
+          "response": []
+        },
+        {
+          "name": "Hapus petani",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/petani/{{petaniId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "petani",
+                "{{petaniId}}"
+              ]
+            },
+            "description": "Soft delete.\n\n**422** bila petani sudah punya transaksi pembelian — data historis tidak boleh kehilangan pemiliknya."
+          },
+          "response": []
         }
-    ],
-    "variable": [
+      ]
+    },
+    {
+      "name": "3b. Pengepul",
+      "item": [
         {
-            "key": "baseUrl",
-            "value": "http://localhost:8000/api/v1",
-            "type": "string"
+          "name": "Daftar pengepul",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/pengepul?q=&sertakanNonaktif=0",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "pengepul"
+              ],
+              "query": [
+                {
+                  "key": "q",
+                  "value": ""
+                },
+                {
+                  "key": "sertakanNonaktif",
+                  "value": "0"
+                }
+              ]
+            },
+            "description": "Default hanya pengepul aktif. `sertakanNonaktif=1` untuk ikut menampilkan yang sudah dinonaktifkan."
+          }
         },
         {
-            "key": "token",
-            "value": "",
-            "type": "string"
+          "name": "⭐ Tambah pengepul",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/pengepul",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "pengepul"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nama\": \"Haji Rohmat\",\n  \"kontak\": \"081234567890\",\n  \"alamat\": \"Batuanten\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.data && json.data.id) {",
+                  "  pm.collectionVariables.set('pengepulId', json.data.id);",
+                  "}",
+                  "pm.test('201 Created', () => pm.response.to.have.status(201));"
+                ]
+              }
+            }
+          ]
         },
         {
-            "key": "tanggalHariIni",
-            "value": "",
-            "type": "string"
+          "name": "Ubah pengepul",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/pengepul/{{pengepulId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "pengepul",
+                "{{pengepulId}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"kontak\": \"089999999999\"\n}"
+            }
+          }
         },
         {
-            "key": "petaniId",
-            "value": "1",
-            "type": "string"
-        },
-        {
-            "key": "karyawanId",
-            "value": "1",
-            "type": "string"
-        },
-        {
-            "key": "karyawanId2",
-            "value": "2",
-            "type": "string"
-        },
-        {
-            "key": "eksportirId",
-            "value": "1",
-            "type": "string"
-        },
-        {
-            "key": "pembelianId",
-            "value": "1",
-            "type": "string"
-        },
-        {
-            "key": "sesiId",
-            "value": "1",
-            "type": "string"
-        },
-        {
-            "key": "penjualanId",
-            "value": "1",
-            "type": "string"
-        },
-        {
-            "key": "biayaId",
-            "value": "1",
-            "type": "string"
+          "name": "Hapus / nonaktifkan pengepul",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/pengepul/{{pengepulId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "pengepul",
+                "{{pengepulId}}"
+              ]
+            },
+            "description": "Pengepul yang sudah punya transaksi hanya DINONAKTIFKAN (bukan dihapus) supaya riwayat pembelian tetap utuh — penjelasannya ada di `message`."
+          }
         }
-    ],
-    "item": [
+      ]
+    },
+    {
+      "name": "4. Master Harga, Tarif, Karyawan & Eksportir",
+      "item": [
         {
-            "name": "1. Autentikasi",
-            "description": "Login berbasis token Sanctum. Frontend menyimpan token (bukan session), jadi tidak perlu CSRF cookie.\n\nRequest **Logout** sengaja ditaruh di folder terakhir supaya menjalankan seluruh koleksi lewat Runner tidak mencabut token di tengah jalan.",
-            "item": [
+          "name": "Harga beli per grade + riwayat",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/master/harga?grade=",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "master",
+                "harga"
+              ],
+              "query": [
                 {
-                    "name": "⭐ Login",
-                    "event": [
-                        {
-                            "listen": "test",
-                            "script": {
-                                "type": "text/javascript",
-                                "exec": [
-                                    "pm.test('Login berhasil', () => pm.response.to.have.status(200));",
-                                    "",
-                                    "const res = pm.response.json();",
-                                    "",
-                                    "if (res.data && res.data.token) {",
-                                    "    pm.collectionVariables.set('token', res.data.token);",
-                                    "    console.log('Token tersimpan. Role:', res.data.user.role);",
-                                    "    pm.test('Token diterima', () => pm.expect(res.data.token).to.be.a('string'));",
-                                    "}"
-                                ]
-                            }
-                        }
-                    ],
-                    "request": {
-                        "auth": {
-                            "type": "noauth"
-                        },
-                        "method": "POST",
-                        "header": [
-                            {
-                                "key": "Accept",
-                                "value": "application/json"
-                            }
-                        ],
-                        "body": {
-                            "mode": "raw",
-                            "raw": "{\n  \"email\": \"owner@nirasarimurni.com\",\n  \"password\": \"password\",\n  \"namaPerangkat\": \"postman\"\n}",
-                            "options": {
-                                "raw": {
-                                    "language": "json"
-                                }
-                            }
-                        },
-                        "url": {
-                            "raw": "{{baseUrl}}/auth/login",
-                            "host": ["{{baseUrl}}"],
-                            "path": ["auth", "login"]
-                        },
-                        "description": "Menukar email + password dengan token Sanctum.\n\n**Body**\n\n| Field | Wajib | Keterangan |\n|---|---|---|\n| `email` | ya | |\n| `password` | ya | |\n| `namaPerangkat` | tidak | Label token, default `sigula-web` |\n\n**Response 200**\n\n```json\n{\n  \"message\": \"Berhasil masuk.\",\n  \"data\": {\n    \"token\": \"1|xxxxx\",\n    \"user\": {\n      \"id\": \"1\", \"nama\": \"Shoffal (Owner)\", \"role\": \"owner\",\n      \"menu\": [\"dashboard\",\"petani\",\"master\",\"pembelian\",\"stok\",\"produksi\",\"penggajian\",\"penjualan\",\"keuangan\"],\n      \"abilities\": [\"lihat-dashboard\", \"...\"]\n    }\n  }\n}\n```\n\n`menu` dipakai frontend untuk menyusun sidebar sesuai role.\n\n**422** bila kredensial salah atau akun dinonaktifkan. **429** setelah 10 percobaan/menit."
-                    },
-                    "response": []
-                },
-                {
-                    "name": "Profil user (me)",
-                    "request": {
-                        "method": "GET",
-                        "header": [
-                            {
-                                "key": "Accept",
-                                "value": "application/json"
-                            }
-                        ],
-                        "url": {
-                            "raw": "{{baseUrl}}/auth/me",
-                            "host": ["{{baseUrl}}"],
-                            "path": ["auth", "me"]
-                        },
-                        "description": "Mengembalikan profil user yang sedang login beserta `menu` dan `abilities` sesuai role."
-                    },
-                    "response": []
+                  "key": "grade",
+                  "value": "",
+                  "description": "Filter riwayat: ns1 | ns2 | kecap"
                 }
-            ]
+              ]
+            },
+            "description": "```json\n{ \"data\": {\n  \"hargaBeli\": { \"NS 1\": 14500, \"NS 2\": 12750, \"Kecap\": 9500 },\n  \"grade\": [ { \"kode\": \"ns1\", \"nama\": \"NS 1\", \"hargaPerKg\": 14500, \"berlakuDari\": \"2026-05-16\" } ],\n  \"riwayat\": [ { \"grade\": \"NS 1\", \"tanggal\": \"2026-05-16\", \"hargaLama\": 13900, \"hargaBaru\": 14500 } ]\n} }\n```\n\n`hargaBeli` bentuknya sama persis dengan state `hargaBeli` di frontend."
+          },
+          "response": []
         },
         {
-            "name": "2. Dashboard",
-            "item": [
-                {
-                    "name": "Ringkasan dashboard",
-                    "request": {
-                        "method": "GET",
-                        "header": [
-                            {
-                                "key": "Accept",
-                                "value": "application/json"
-                            }
-                        ],
-                        "url": {
-                            "raw": "{{baseUrl}}/dashboard",
-                            "host": ["{{baseUrl}}"],
-                            "path": ["dashboard"]
-                        },
-                        "description": "Ringkasan operasional hari ini.\n\nBlok `keuangan` dan `tren` **hanya muncul untuk Owner** — Staff Gudang & Produksi tidak menerima angka laba sama sekali.\n\n**Response 200 (ringkas)**\n\n```json\n{\n  \"data\": {\n    \"tanggal\": \"2026-08-13\",\n    \"stok\": {\n      \"bahanMentah\": { \"NS 1\": 1886, \"NS 2\": 1978, \"Kecap\": 2014, \"total\": 5878 },\n      \"kristal\": 4075.2, \"brondol\": 912.67\n    },\n    \"produksiHariIni\": {\n      \"jumlahSesi\": 14, \"tungkuAktif\": 4, \"kgBahan\": 1755,\n      \"kgKristal\": 997.19, \"kgBrondol\": 204.18,\n      \"totalProduksi\": 1201.37, \"rendemen\": 93.42\n    },\n    \"rendemenBulanIni\": 93.26,\n    \"keuangan\": { \"pendapatanBulanIni\": 322639265, \"labaBulanIni\": 103495883.5, \"margin\": 32.08 },\n    \"tren\": [ { \"bulan\": \"2026-03\", \"label\": \"Mar 26\", \"pendapatan\": 702481372, \"laba\": 255610209.5 } ],\n    \"aktivitasTerbaru\": [ { \"modul\": \"Pembelian\", \"keterangan\": \"Sukirman — NS 1 350 kg\", \"nilai\": \"Rp 5.075.000\" } ]\n  }\n}\n```"
-                    },
-                    "response": []
+          "name": "Ubah harga grade",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"grade\": \"NS 1\",\n  \"harga\": 15200,\n  \"berlakuDari\": \"{{tanggalHariIni}}\",\n  \"catatan\": \"Kenaikan harga pasar\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
                 }
-            ]
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/master/harga",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "master",
+                "harga"
+              ]
+            },
+            "description": "**Menambah versi harga baru — record lama tidak pernah di-update.** Transaksi pembelian yang sudah terjadi tetap merujuk harga yang berlaku saat itu.\n\n| Field | Wajib | Keterangan |\n|---|---|---|\n| `grade` | ya | `NS 1` / `NS 2` / `Kecap` |\n| `harga` | ya | > 0 |\n| `berlakuDari` | tidak | Default: sekarang |\n| `catatan` | tidak | |\n\nRole: Owner."
+          },
+          "response": []
         },
         {
-            "name": "3. Data Petani",
-            "item": [
+          "name": "Tarif gaji & uang makan + riwayat",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/master/tarif?jenis=",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "master",
+                "tarif"
+              ],
+              "query": [
                 {
-                    "name": "Daftar petani",
-                    "request": {
-                        "method": "GET",
-                        "header": [
-                            {
-                                "key": "Accept",
-                                "value": "application/json"
-                            }
-                        ],
-                        "url": {
-                            "raw": "{{baseUrl}}/petani?q=",
-                            "host": ["{{baseUrl}}"],
-                            "path": ["petani"],
-                            "query": [
-                                {
-                                    "key": "q",
-                                    "value": "",
-                                    "description": "Cari nama / nomor member / kontak"
-                                }
-                            ]
-                        },
-                        "description": "Daftar seluruh petani (tanpa paginasi — jumlahnya kecil), urut nama.\n\nSetiap baris menyertakan `totalTransaksi` dan `totalNilai` pembelian, jadi kolom \"Total Transaksi\" di tabel tidak perlu query tambahan.\n\n```json\n{ \"data\": [ {\n  \"id\": \"1\", \"nama\": \"Sukirman\", \"status\": \"Member\", \"statusKode\": \"member\",\n  \"nomorMember\": \"211\", \"labelMember\": \"Petani 211\",\n  \"kontak\": \"0812-3344-5566\", \"alamat\": \"Desa Sukamaju\",\n  \"totalTransaksi\": 42, \"totalNilai\": 168420000\n} ] }\n```"
-                    },
-                    "response": []
-                },
-                {
-                    "name": "⭐ Tambah petani",
-                    "event": [
-                        {
-                            "listen": "test",
-                            "script": {
-                                "type": "text/javascript",
-                                "exec": [
-                                    "if (pm.response.code === 201) {",
-                                    "    pm.collectionVariables.set('petaniId', pm.response.json().data.id);",
-                                    "}"
-                                ]
-                            }
-                        }
-                    ],
-                    "request": {
-                        "method": "POST",
-                        "header": [
-                            {
-                                "key": "Accept",
-                                "value": "application/json"
-                            }
-                        ],
-                        "body": {
-                            "mode": "raw",
-                            "raw": "{\n  \"nama\": \"Sukirman\",\n  \"status\": \"Member\",\n  \"kontak\": \"0812-3344-5566\",\n  \"alamat\": \"Desa Sukamaju, Kec. Cikoneng\"\n}",
-                            "options": {
-                                "raw": {
-                                    "language": "json"
-                                }
-                            }
-                        },
-                        "url": {
-                            "raw": "{{baseUrl}}/petani",
-                            "host": ["{{baseUrl}}"],
-                            "path": ["petani"]
-                        },
-                        "description": "**Body**\n\n| Field | Wajib | Keterangan |\n|---|---|---|\n| `nama` | ya | |\n| `status` | ya | `Member` / `Non-Member` (atau `member` / `non_member`) |\n| `nomorMember` | tidak | 3 digit. **Dikosongkan → digenerate otomatis** (mulai 201). Diabaikan bila status Non-Member |\n| `kontak`, `alamat` | tidak | |\n\nRole: Owner atau Staff Gudang."
-                    },
-                    "response": []
-                },
-                {
-                    "name": "Detail petani",
-                    "request": {
-                        "method": "GET",
-                        "header": [
-                            {
-                                "key": "Accept",
-                                "value": "application/json"
-                            }
-                        ],
-                        "url": {
-                            "raw": "{{baseUrl}}/petani/{{petaniId}}",
-                            "host": ["{{baseUrl}}"],
-                            "path": ["petani", "{{petaniId}}"]
-                        }
-                    },
-                    "response": []
-                },
-                {
-                    "name": "Ubah petani",
-                    "request": {
-                        "method": "PUT",
-                        "header": [
-                            {
-                                "key": "Accept",
-                                "value": "application/json"
-                            }
-                        ],
-                        "body": {
-                            "mode": "raw",
-                            "raw": "{\n  \"nama\": \"Sukirman\",\n  \"status\": \"Member\",\n  \"kontak\": \"0812-0000-1111\",\n  \"alamat\": \"Desa Sukamaju, Kec. Cikoneng\"\n}",
-                            "options": {
-                                "raw": {
-                                    "language": "json"
-                                }
-                            }
-                        },
-                        "url": {
-                            "raw": "{{baseUrl}}/petani/{{petaniId}}",
-                            "host": ["{{baseUrl}}"],
-                            "path": ["petani", "{{petaniId}}"]
-                        },
-                        "description": "Semua field dikirim ulang (bukan patch parsial). Nomor member yang sudah ada dipertahankan bila field-nya dikosongkan."
-                    },
-                    "response": []
-                },
-                {
-                    "name": "Hapus petani",
-                    "request": {
-                        "method": "DELETE",
-                        "header": [
-                            {
-                                "key": "Accept",
-                                "value": "application/json"
-                            }
-                        ],
-                        "url": {
-                            "raw": "{{baseUrl}}/petani/{{petaniId}}",
-                            "host": ["{{baseUrl}}"],
-                            "path": ["petani", "{{petaniId}}"]
-                        },
-                        "description": "Soft delete.\n\n**422** bila petani sudah punya transaksi pembelian — data historis tidak boleh kehilangan pemiliknya."
-                    },
-                    "response": []
+                  "key": "jenis",
+                  "value": "",
+                  "description": "Filter riwayat: kristal | brondol | uang_makan"
                 }
-            ]
+              ]
+            },
+            "description": "```json\n{ \"data\": {\n  \"tarif\": { \"kristal\": 1150, \"brondol\": 800, \"uangMakan\": 5000 },\n  \"jenis\": [ { \"kode\": \"kristal\", \"nama\": \"Tarif Gula Kristal per Kg\", \"nilai\": 1150 } ],\n  \"riwayat\": [ ... ]\n} }\n```"
+          },
+          "response": []
+        },
+        {
+          "name": "Ubah tarif",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"jenis\": \"kristal\",\n  \"nilai\": 1250,\n  \"berlakuDari\": \"{{tanggalHariIni}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/master/tarif",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "master",
+                "tarif"
+              ]
+            },
+            "description": "Sama seperti harga: menambah versi baru, tidak menimpa.\n\n`jenis`: `kristal` · `brondol` · `uang_makan` (boleh ditulis `uangMakan`).\n\n**Penting:** penggajian memakai tarif yang berlaku pada **tanggal produksi**, jadi mengubah tarif hari ini tidak mengubah upah produksi kemarin.\n\nRole: Owner."
+          },
+          "response": []
+        },
+        {
+          "name": "Daftar karyawan",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/master/karyawan?q=&sertakanNonaktif=",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "master",
+                "karyawan"
+              ],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "",
+                  "description": "Cari nama"
+                },
+                {
+                  "key": "sertakanNonaktif",
+                  "value": "",
+                  "description": "1 = ikut tampilkan karyawan nonaktif"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "⭐ Tambah karyawan",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    pm.collectionVariables.set('karyawanId', pm.response.json().data.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nama\": \"Pardi\",\n  \"kontak\": \"0857-1122-3344\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/master/karyawan",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "master",
+                "karyawan"
+              ]
+            },
+            "description": "Role: Owner."
+          },
+          "response": []
+        },
+        {
+          "name": "Ubah karyawan",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"kontak\": \"0857-0000-1111\",\n  \"aktif\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/master/karyawan/{{karyawanId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "master",
+                "karyawan",
+                "{{karyawanId}}"
+              ]
+            },
+            "description": "Patch parsial — kirim hanya field yang berubah (`nama`, `kontak`, `aktif`)."
+          },
+          "response": []
+        },
+        {
+          "name": "Hapus karyawan",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/master/karyawan/{{karyawanId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "master",
+                "karyawan",
+                "{{karyawanId}}"
+              ]
+            },
+            "description": "Karyawan yang **pernah ikut sesi tungku akan dinonaktifkan**, bukan dihapus, supaya histori produksi & slip gaji lama tetap bisa ditelusuri. Pesan response menjelaskan mana yang terjadi."
+          },
+          "response": []
+        },
+        {
+          "name": "Daftar eksportir",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/master/eksportir?sertakanNonaktif=",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "master",
+                "eksportir"
+              ],
+              "query": [
+                {
+                  "key": "sertakanNonaktif",
+                  "value": "",
+                  "description": "1 = ikut tampilkan yang nonaktif"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "⭐ Tambah eksportir",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    pm.collectionVariables.set('eksportirId', pm.response.json().data.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nama\": \"PT Global Sweet Export\",\n  \"kontak\": \"021-5567890\",\n  \"alamat\": \"Kawasan Industri Pulogadung, Jakarta\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/master/eksportir",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "master",
+                "eksportir"
+              ]
+            },
+            "description": "Saat ini client hanya punya 1 eksportir tetap, tapi tabelnya tetap master (tidak di-hardcode) untuk antisipasi penambahan."
+          },
+          "response": []
+        },
+        {
+          "name": "Ubah eksportir",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"kontak\": \"021-1112223\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/master/eksportir/{{eksportirId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "master",
+                "eksportir",
+                "{{eksportirId}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Hapus eksportir",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/master/eksportir/{{eksportirId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "master",
+                "eksportir",
+                "{{eksportirId}}"
+              ]
+            },
+            "description": "**422** bila eksportir sudah punya transaksi penjualan."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "5. Pembelian Bahan dari Petani",
+      "item": [
+        {
+          "name": "Daftar pembelian",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/pembelian?dari=&sampai=&petaniId=&grade=&q=&page=1&perPage=25",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "pembelian"
+              ],
+              "query": [
+                {
+                  "key": "dari",
+                  "value": "",
+                  "description": "YYYY-MM-DD"
+                },
+                {
+                  "key": "sampai",
+                  "value": "",
+                  "description": "YYYY-MM-DD"
+                },
+                {
+                  "key": "petaniId",
+                  "value": "",
+                  "description": "Filter per petani"
+                },
+                {
+                  "key": "grade",
+                  "value": "",
+                  "description": "ns1 | ns2 | kecap"
+                },
+                {
+                  "key": "q",
+                  "value": "",
+                  "description": "Cari nomor kwitansi / nama petani"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "perPage",
+                  "value": "25",
+                  "description": "Maks 200"
+                },
+                {
+                  "key": "pengepulId",
+                  "value": ""
+                },
+                {
+                  "key": "punyaPengepul",
+                  "value": ""
+                }
+              ]
+            },
+            "description": "`punyaPengepul=1` hanya transaksi lewat pengepul, `=0` hanya pembelian langsung, kosong = semua."
+          },
+          "response": []
+        },
+        {
+          "name": "⭐ Transaksi pembelian baru",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const d = pm.response.json();",
+                  "    pm.collectionVariables.set('pembelianId', d.data.id);",
+                  "    console.log('Kwitansi:', d.data.nomorKwitansi, '| total:', d.data.total);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tanggal\": \"{{tanggalHariIni}}\",\n  \"petaniId\": \"{{petaniId}}\",\n  \"pengepulId\": null,\n  \"grade\": \"NS 1\",\n  \"kg\": 250.5,\n  \"catatan\": \"Setoran pagi\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/pembelian",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "pembelian"
+              ]
+            },
+            "description": "`pengepulId` opsional — isi bila bahan dibeli lewat perantara, kosongkan (null) bila langsung dari petani.\n\n`harga` boleh dikosongkan agar backend memakai Master Harga yang berlaku pada `tanggal`.\n\nTotal bayar DIBULATKAN ke kelipatan 500 (sisa <= 500 naik ke 500, selebihnya ke 1.000 berikutnya). Nilai sebelum pembulatan tetap dikirim sebagai `totalSebelumBulat`."
+          },
+          "response": []
         },
         {
           "name": "Detail pembelian (+ data kwitansi)",
@@ -426,7 +1129,7 @@
           "response": []
         },
         {
-          "name": "Export pembelian (CSV)",
+          "name": "Export pembelian (CSV/XLSX/PDF)",
           "request": {
             "method": "GET",
             "header": [
@@ -477,7 +1180,7 @@
                 }
               ]
             },
-            "description": "Rincian pembelian bahan + baris TOTAL kilogram dan rupiah.\n\n---\n**Format file** — atur lewat parameter `format`: `csv` (default), `xlsx` (Excel asli, angka bisa di-SUM), atau `pdf` (berkop perusahaan).\n\nCSV:\n\nCSV siap dibuka di Excel: pemisah kolom `;`, desimal koma (`1450000,00`), diawali BOM UTF-8. Nama file otomatis memuat rentang tanggal, mis. `laba-rugi_2026-08-01_sd_2026-08-31.csv`.\n\nDi Postman klik **Save Response -> Save to a file** untuk mengunduhnya.\n\nSetiap export tercatat di audit log (`laporan.export`)."
+            "description": "`format` menerima `csv` (default), `xlsx`, atau `pdf`."
           },
           "response": []
         }
@@ -529,186 +1232,34 @@
                 "kartu"
               ],
               "query": [
-            "name": "4. Master Harga, Tarif, Karyawan & Eksportir",
-            "item": [
                 {
-                    "name": "Harga beli per grade + riwayat",
-                    "request": {
-                        "method": "GET",
-                        "header": [
-                            {
-                                "key": "Accept",
-                                "value": "application/json"
-                            }
-                        ],
-                        "url": {
-                            "raw": "{{baseUrl}}/master/harga?grade=",
-                            "host": ["{{baseUrl}}"],
-                            "path": ["master", "harga"],
-                            "query": [
-                                {
-                                    "key": "grade",
-                                    "value": "",
-                                    "description": "Filter riwayat: ns1 | ns2 | kecap"
-                                }
-                            ]
-                        },
-                        "description": "```json\n{ \"data\": {\n  \"hargaBeli\": { \"NS 1\": 14500, \"NS 2\": 12750, \"Kecap\": 9500 },\n  \"grade\": [ { \"kode\": \"ns1\", \"nama\": \"NS 1\", \"hargaPerKg\": 14500, \"berlakuDari\": \"2026-05-16\" } ],\n  \"riwayat\": [ { \"grade\": \"NS 1\", \"tanggal\": \"2026-05-16\", \"hargaLama\": 13900, \"hargaBaru\": 14500 } ]\n} }\n```\n\n`hargaBeli` bentuknya sama persis dengan state `hargaBeli` di frontend."
-                    },
-                    "response": []
+                  "key": "kategori",
+                  "value": "",
+                  "description": "ns1 | ns2 | kecap | kristal | brondol"
                 },
                 {
-                    "name": "Ubah harga grade",
-                    "request": {
-                        "method": "POST",
-                        "header": [
-                            {
-                                "key": "Accept",
-                                "value": "application/json"
-                            }
-                        ],
-                        "body": {
-                            "mode": "raw",
-                            "raw": "{\n  \"grade\": \"NS 1\",\n  \"harga\": 15200,\n  \"berlakuDari\": \"{{tanggalHariIni}}\",\n  \"catatan\": \"Kenaikan harga pasar\"\n}",
-                            "options": {
-                                "raw": {
-                                    "language": "json"
-                                }
-                            }
-                        },
-                        "url": {
-                            "raw": "{{baseUrl}}/master/harga",
-                            "host": ["{{baseUrl}}"],
-                            "path": ["master", "harga"]
-                        },
-                        "description": "**Menambah versi harga baru — record lama tidak pernah di-update.** Transaksi pembelian yang sudah terjadi tetap merujuk harga yang berlaku saat itu.\n\n| Field | Wajib | Keterangan |\n|---|---|---|\n| `grade` | ya | `NS 1` / `NS 2` / `Kecap` |\n| `harga` | ya | > 0 |\n| `berlakuDari` | tidak | Default: sekarang |\n| `catatan` | tidak | |\n\nRole: Owner."
-                    },
-                    "response": []
+                  "key": "jenis",
+                  "value": "",
+                  "description": "masuk | keluar"
                 },
                 {
-                    "name": "Tarif gaji & uang makan + riwayat",
-                    "request": {
-                        "method": "GET",
-                        "header": [
-                            {
-                                "key": "Accept",
-                                "value": "application/json"
-                            }
-                        ],
-                        "url": {
-                            "raw": "{{baseUrl}}/master/tarif?jenis=",
-                            "host": ["{{baseUrl}}"],
-                            "path": ["master", "tarif"],
-                            "query": [
-                                {
-                                    "key": "jenis",
-                                    "value": "",
-                                    "description": "Filter riwayat: kristal | brondol | uang_makan"
-                                }
-                            ]
-                        },
-                        "description": "```json\n{ \"data\": {\n  \"tarif\": { \"kristal\": 1150, \"brondol\": 800, \"uangMakan\": 5000 },\n  \"jenis\": [ { \"kode\": \"kristal\", \"nama\": \"Tarif Gula Kristal per Kg\", \"nilai\": 1150 } ],\n  \"riwayat\": [ ... ]\n} }\n```"
-                    },
-                    "response": []
+                  "key": "dari",
+                  "value": "",
+                  "description": "YYYY-MM-DD"
                 },
                 {
-                    "name": "Ubah tarif",
-                    "request": {
-                        "method": "POST",
-                        "header": [
-                            {
-                                "key": "Accept",
-                                "value": "application/json"
-                            }
-                        ],
-                        "body": {
-                            "mode": "raw",
-                            "raw": "{\n  \"jenis\": \"kristal\",\n  \"nilai\": 1250,\n  \"berlakuDari\": \"{{tanggalHariIni}}\"\n}",
-                            "options": {
-                                "raw": {
-                                    "language": "json"
-                                }
-                            }
-                        },
-                        "url": {
-                            "raw": "{{baseUrl}}/master/tarif",
-                            "host": ["{{baseUrl}}"],
-                            "path": ["master", "tarif"]
-                        },
-                        "description": "Sama seperti harga: menambah versi baru, tidak menimpa.\n\n`jenis`: `kristal` · `brondol` · `uang_makan` (boleh ditulis `uangMakan`).\n\n**Penting:** penggajian memakai tarif yang berlaku pada **tanggal produksi**, jadi mengubah tarif hari ini tidak mengubah upah produksi kemarin.\n\nRole: Owner."
-                    },
-                    "response": []
+                  "key": "sampai",
+                  "value": "",
+                  "description": "YYYY-MM-DD"
                 },
                 {
-                    "name": "Daftar karyawan",
-                    "request": {
-                        "method": "GET",
-                        "header": [
-                            {
-                                "key": "Accept",
-                                "value": "application/json"
-                            }
-                        ],
-                        "url": {
-                            "raw": "{{baseUrl}}/master/karyawan?q=&sertakanNonaktif=",
-                            "host": ["{{baseUrl}}"],
-                            "path": ["master", "karyawan"],
-                            "query": [
-                                {
-                                    "key": "q",
-                                    "value": "",
-                                    "description": "Cari nama"
-                                },
-                                {
-                                    "key": "sertakanNonaktif",
-                                    "value": "",
-                                    "description": "1 = ikut tampilkan karyawan nonaktif"
-                                }
-                            ]
-                        }
-                    },
-                    "response": []
+                  "key": "q",
+                  "value": "",
+                  "description": "Cari keterangan"
                 },
                 {
-                    "name": "⭐ Tambah karyawan",
-                    "event": [
-                        {
-                            "listen": "test",
-                            "script": {
-                                "type": "text/javascript",
-                                "exec": [
-                                    "if (pm.response.code === 201) {",
-                                    "    pm.collectionVariables.set('karyawanId', pm.response.json().data.id);",
-                                    "}"
-                                ]
-                            }
-                        }
-                    ],
-                    "request": {
-                        "method": "POST",
-                        "header": [
-                            {
-                                "key": "Accept",
-                                "value": "application/json"
-                            }
-                        ],
-                        "body": {
-                            "mode": "raw",
-                            "raw": "{\n  \"nama\": \"Pardi\",\n  \"kontak\": \"0857-1122-3344\"\n}",
-                            "options": {
-                                "raw": {
-                                    "language": "json"
-                                }
-                            }
-                        },
-                        "url": {
-                            "raw": "{{baseUrl}}/master/karyawan",
-                            "host": ["{{baseUrl}}"],
-                            "path": ["master", "karyawan"]
-                        },
-                        "description": "Role: Owner."
-                    },
-                    "response": []
+                  "key": "page",
+                  "value": "1"
                 },
                 {
                   "key": "perPage",
@@ -755,7 +1306,7 @@
           "response": []
         },
         {
-          "name": "Export kartu stok (CSV)",
+          "name": "Export kartu stok (CSV/XLSX/PDF)",
           "request": {
             "method": "GET",
             "header": [
@@ -807,7 +1358,7 @@
                 }
               ]
             },
-            "description": "Histori mutasi stok lengkap dengan saldo setelah tiap transaksi.\n\n---\n**Format file** — atur lewat parameter `format`: `csv` (default), `xlsx` (Excel asli, angka bisa di-SUM), atau `pdf` (berkop perusahaan).\n\nCSV:\n\nCSV siap dibuka di Excel: pemisah kolom `;`, desimal koma (`1450000,00`), diawali BOM UTF-8. Nama file otomatis memuat rentang tanggal, mis. `laba-rugi_2026-08-01_sd_2026-08-31.csv`.\n\nDi Postman klik **Save Response -> Save to a file** untuk mengunduhnya.\n\nSetiap export tercatat di audit log (`laporan.export`)."
+            "description": "`format` menerima `csv` (default), `xlsx`, atau `pdf`."
           },
           "response": []
         }
@@ -841,336 +1392,233 @@
                   "key": "tanggal",
                   "value": "",
                   "description": "Semua tungku yang jalan di 1 hari tertentu"
-                    "name": "Ubah karyawan",
-                    "request": {
-                        "method": "PUT",
-                        "header": [
-                            {
-                                "key": "Accept",
-                                "value": "application/json"
-                            }
-                        ],
-                        "body": {
-                            "mode": "raw",
-                            "raw": "{\n  \"kontak\": \"0857-0000-1111\",\n  \"aktif\": true\n}",
-                            "options": {
-                                "raw": {
-                                    "language": "json"
-                                }
-                            }
-                        },
-                        "url": {
-                            "raw": "{{baseUrl}}/master/karyawan/{{karyawanId}}",
-                            "host": ["{{baseUrl}}"],
-                            "path": ["master", "karyawan", "{{karyawanId}}"]
-                        },
-                        "description": "Patch parsial — kirim hanya field yang berubah (`nama`, `kontak`, `aktif`)."
-                    },
-                    "response": []
                 },
                 {
-                    "name": "Hapus karyawan",
-                    "request": {
-                        "method": "DELETE",
-                        "header": [
-                            {
-                                "key": "Accept",
-                                "value": "application/json"
-                            }
-                        ],
-                        "url": {
-                            "raw": "{{baseUrl}}/master/karyawan/{{karyawanId}}",
-                            "host": ["{{baseUrl}}"],
-                            "path": ["master", "karyawan", "{{karyawanId}}"]
-                        },
-                        "description": "Karyawan yang **pernah ikut sesi tungku akan dinonaktifkan**, bukan dihapus, supaya histori produksi & slip gaji lama tetap bisa ditelusuri. Pesan response menjelaskan mana yang terjadi."
-                    },
-                    "response": []
+                  "key": "dari",
+                  "value": "",
+                  "description": "YYYY-MM-DD"
                 },
                 {
-                    "name": "Daftar eksportir",
-                    "request": {
-                        "method": "GET",
-                        "header": [
-                            {
-                                "key": "Accept",
-                                "value": "application/json"
-                            }
-                        ],
-                        "url": {
-                            "raw": "{{baseUrl}}/master/eksportir?sertakanNonaktif=",
-                            "host": ["{{baseUrl}}"],
-                            "path": ["master", "eksportir"],
-                            "query": [
-                                {
-                                    "key": "sertakanNonaktif",
-                                    "value": "",
-                                    "description": "1 = ikut tampilkan yang nonaktif"
-                                }
-                            ]
-                        }
-                    },
-                    "response": []
+                  "key": "sampai",
+                  "value": "",
+                  "description": "YYYY-MM-DD"
                 },
                 {
-                    "name": "⭐ Tambah eksportir",
-                    "event": [
-                        {
-                            "listen": "test",
-                            "script": {
-                                "type": "text/javascript",
-                                "exec": [
-                                    "if (pm.response.code === 201) {",
-                                    "    pm.collectionVariables.set('eksportirId', pm.response.json().data.id);",
-                                    "}"
-                                ]
-                            }
-                        }
-                    ],
-                    "request": {
-                        "method": "POST",
-                        "header": [
-                            {
-                                "key": "Accept",
-                                "value": "application/json"
-                            }
-                        ],
-                        "body": {
-                            "mode": "raw",
-                            "raw": "{\n  \"nama\": \"PT Global Sweet Export\",\n  \"kontak\": \"021-5567890\",\n  \"alamat\": \"Kawasan Industri Pulogadung, Jakarta\"\n}",
-                            "options": {
-                                "raw": {
-                                    "language": "json"
-                                }
-                            }
-                        },
-                        "url": {
-                            "raw": "{{baseUrl}}/master/eksportir",
-                            "host": ["{{baseUrl}}"],
-                            "path": ["master", "eksportir"]
-                        },
-                        "description": "Saat ini client hanya punya 1 eksportir tetap, tapi tabelnya tetap master (tidak di-hardcode) untuk antisipasi penambahan."
-                    },
-                    "response": []
+                  "key": "status",
+                  "value": "",
+                  "description": "sedang_diproses | selesai"
                 },
                 {
-                    "name": "Ubah eksportir",
-                    "request": {
-                        "method": "PUT",
-                        "header": [
-                            {
-                                "key": "Accept",
-                                "value": "application/json"
-                            }
-                        ],
-                        "body": {
-                            "mode": "raw",
-                            "raw": "{\n  \"kontak\": \"021-1112223\"\n}",
-                            "options": {
-                                "raw": {
-                                    "language": "json"
-                                }
-                            }
-                        },
-                        "url": {
-                            "raw": "{{baseUrl}}/master/eksportir/{{eksportirId}}",
-                            "host": ["{{baseUrl}}"],
-                            "path": ["master", "eksportir", "{{eksportirId}}"]
-                        }
-                    },
-                    "response": []
+                  "key": "grade",
+                  "value": "",
+                  "description": "ns1 | ns2 | kecap"
                 },
                 {
-                    "name": "Hapus eksportir",
-                    "request": {
-                        "method": "DELETE",
-                        "header": [
-                            {
-                                "key": "Accept",
-                                "value": "application/json"
-                            }
-                        ],
-                        "url": {
-                            "raw": "{{baseUrl}}/master/eksportir/{{eksportirId}}",
-                            "host": ["{{baseUrl}}"],
-                            "path": ["master", "eksportir", "{{eksportirId}}"]
-                        },
-                        "description": "**422** bila eksportir sudah punya transaksi penjualan."
-                    },
-                    "response": []
+                  "key": "karyawanId",
+                  "value": "",
+                  "description": "Sesi yang melibatkan karyawan ini"
+                },
+                {
+                  "key": "q",
+                  "value": "",
+                  "description": "Cari kode tungku / nama karyawan"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "perPage",
+                  "value": "50",
+                  "description": "Maks 200"
                 }
-            ]
+              ]
+            },
+            "description": "Riwayat ditampilkan **per sesi tungku** (bukan per hari). Menyertakan `ringkasan` produksi harian:\n\n```json\n\"ringkasan\": { \"jumlahSesi\": 14, \"tungkuAktif\": 4, \"kgBahan\": 1755,\n               \"kgKristal\": 997.19, \"kgBrondol\": 204.18,\n               \"totalProduksi\": 1201.37, \"rendemen\": 93.42 }\n```"
+          },
+          "response": []
         },
         {
-            "name": "5. Pembelian Bahan dari Petani",
-            "item": [
-                {
-                    "name": "Daftar pembelian",
-                    "request": {
-                        "method": "GET",
-                        "header": [
-                            {
-                                "key": "Accept",
-                                "value": "application/json"
-                            }
-                        ],
-                        "url": {
-                            "raw": "{{baseUrl}}/pembelian?dari=&sampai=&petaniId=&grade=&q=&page=1&perPage=25",
-                            "host": ["{{baseUrl}}"],
-                            "path": ["pembelian"],
-                            "query": [
-                                {
-                                    "key": "dari",
-                                    "value": "",
-                                    "description": "YYYY-MM-DD"
-                                },
-                                {
-                                    "key": "sampai",
-                                    "value": "",
-                                    "description": "YYYY-MM-DD"
-                                },
-                                {
-                                    "key": "petaniId",
-                                    "value": "",
-                                    "description": "Filter per petani"
-                                },
-                                {
-                                    "key": "grade",
-                                    "value": "",
-                                    "description": "ns1 | ns2 | kecap"
-                                },
-                                {
-                                    "key": "q",
-                                    "value": "",
-                                    "description": "Cari nomor kwitansi / nama petani"
-                                },
-                                {
-                                    "key": "page",
-                                    "value": "1"
-                                },
-                                {
-                                    "key": "perPage",
-                                    "value": "25",
-                                    "description": "Maks 200"
-                                }
-                            ]
-                        },
-                        "description": "Berpaginasi. Selain `data` + `meta`, response menyertakan `ringkasan` untuk card di atas tabel:\n\n```json\n\"ringkasan\": { \"hariIni\": 5075000, \"kgHariIni\": 350, \"bulanIni\": 168420000, \"kgBulanIni\": 11620 }\n```"
-                    },
-                    "response": []
-                },
-                {
-                    "name": "⭐ Transaksi pembelian baru",
-                    "event": [
-                        {
-                            "listen": "test",
-                            "script": {
-                                "type": "text/javascript",
-                                "exec": [
-                                    "if (pm.response.code === 201) {",
-                                    "    const d = pm.response.json();",
-                                    "    pm.collectionVariables.set('pembelianId', d.data.id);",
-                                    "    console.log('Kwitansi:', d.data.nomorKwitansi, '| total:', d.data.total);",
-                                    "}"
-                                ]
-                            }
-                        }
-                    ],
-                    "request": {
-                        "method": "POST",
-                        "header": [
-                            {
-                                "key": "Accept",
-                                "value": "application/json"
-                            }
-                        ],
-                        "body": {
-                            "mode": "raw",
-                            "raw": "{\n  \"tanggal\": \"{{tanggalHariIni}}\",\n  \"petaniId\": \"{{petaniId}}\",\n  \"grade\": \"NS 1\",\n  \"kg\": 250,\n  \"harga\": null\n}",
-                            "options": {
-                                "raw": {
-                                    "language": "json"
-                                }
-                            }
-                        },
-                        "url": {
-                            "raw": "{{baseUrl}}/pembelian",
-                            "host": ["{{baseUrl}}"],
-                            "path": ["pembelian"]
-                        },
-                        "description": "**Body**\n\n| Field | Wajib | Keterangan |\n|---|---|---|\n| `tanggal` | ya | |\n| `petaniId` | ya | |\n| `grade` | ya | `NS 1` / `NS 2` / `Kecap` |\n| `kg` | ya | > 0 |\n| `harga` | tidak | **null → otomatis dari master harga yang berlaku pada `tanggal`**, tapi tetap bisa diisi manual untuk kasus nego |\n| `statusPembayaran` | tidak | Default `lunas` |\n| `catatan` | tidak | |\n\n**Efek otomatis:** stok bahan mentah grade tsb bertambah + 1 baris kartu stok. Nomor kwitansi digenerate (`KW/2026/08/0044`) dengan counter terkunci — tidak mungkin kembar.\n\nResponse juga membawa objek `kwitansi` siap cetak (nama petani, nomor member, kg, harga, total).\n\nRole: Owner atau Staff Gudang."
-                    },
-                    "response": []
-                },
-                {
-                    "name": "Detail pembelian (+ data kwitansi)",
-                    "request": {
-                        "method": "GET",
-                        "header": [
-                            {
-                                "key": "Accept",
-                                "value": "application/json"
-                            }
-                        ],
-                        "url": {
-                            "raw": "{{baseUrl}}/pembelian/{{pembelianId}}",
-                            "host": ["{{baseUrl}}"],
-                            "path": ["pembelian", "{{pembelianId}}"]
-                        }
-                    },
-                    "response": []
-                },
-                {
-                    "name": "Batalkan pembelian",
-                    "request": {
-                        "method": "DELETE",
-                        "header": [
-                            {
-                                "key": "Accept",
-                                "value": "application/json"
-                            }
-                        ],
-                        "body": {
-                            "mode": "raw",
-                            "raw": "{\n  \"alasan\": \"Salah input kilogram\"\n}",
-                            "options": {
-                                "raw": {
-                                    "language": "json"
-                                }
-                            }
-                        },
-                        "url": {
-                            "raw": "{{baseUrl}}/pembelian/{{pembelianId}}",
-                            "host": ["{{baseUrl}}"],
-                            "path": ["pembelian", "{{pembelianId}}"]
-                        },
-                        "description": "Stok dikembalikan lewat **mutasi balik** (kartu stok tetap utuh sebagai audit trail), lalu record di-soft delete.\n\n**422** bila bahannya sudah terlanjur dipakai produksi sehingga stok tidak cukup untuk dikeluarkan."
-                    },
-                    "response": []
-                }
-            ]
+          "name": "⭐ Mulai sesi tungku",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const d = pm.response.json();",
+                  "    pm.collectionVariables.set('sesiId', d.data.id);",
+                  "    console.log('Sesi', d.data.kodeTungku, 'dimulai.');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tanggal\": \"{{tanggalHariIni}}\",\n  \"kodeTungku\": null,\n  \"bahan\": [\n    {\n      \"grade\": \"NS 1\",\n      \"kg\": 60\n    },\n    {\n      \"grade\": \"NS 2\",\n      \"kg\": 40.5\n    }\n  ],\n  \"karyawan1Id\": \"{{karyawanId}}\",\n  \"karyawan2Id\": null,\n  \"catatan\": \"Tungku pagi\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/produksi/sesi",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "produksi",
+                "sesi"
+              ]
+            },
+            "description": "Satu tungku boleh memakai BEBERAPA GRADE sekaligus lewat array `bahan`; kg-nya boleh desimal (maks 2 angka di belakang koma) dan tiap grade hanya boleh muncul sekali.\n\n`karyawan2Id` OPSIONAL — kosongkan bila tungku dikerjakan satu orang; seluruh hasil jadi porsinya sendiri.\n\nBentuk lama (`grade` + `kgBahan` tunggal) masih diterima demi kompatibilitas klien versi sebelumnya.\n\nStok bahan mentah baru dipotong saat sesi DISELESAIKAN, bukan saat dimulai."
+          },
+          "response": []
         },
         {
-            "name": "6. Manajemen Stok",
-            "item": [
+          "name": "⭐⭐ Selesaikan sesi tungku",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const d = pm.response.json();",
+                  "    console.log(d.message);",
+                  "    pm.test('Rendemen terhitung', () => pm.expect(d.data.rendemen).to.be.a('number'));",
+                  "    pm.test('Status selesai', () => pm.expect(d.data.status).to.eql('Selesai'));",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"kgKristal\": 80,\n  \"kgBrondol\": 20\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/produksi/sesi/{{sesiId}}/selesai",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "produksi",
+                "sesi",
+                "{{sesiId}}",
+                "selesai"
+              ]
+            },
+            "description": "Kg hasil untuk SATU TUNGKU (gabungan seluruh karyawan), bukan per orang. Boleh desimal.\n\nTidak ada batas atas rendemen: di lapangan kadang ada penambahan gula di luar sistem, jadi hasil boleh melebihi bahan mentah dan rendemen >100% dicatat apa adanya."
+          },
+          "response": []
+        },
+        {
+          "name": "Detail sesi (+ porsi karyawan)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/produksi/sesi/{{sesiId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "produksi",
+                "sesi",
+                "{{sesiId}}"
+              ]
+            },
+            "description": "Menyertakan hasil pembagian otomatis:\n\n```json\n\"porsiKaryawan\": [\n  { \"karyawanId\": \"1\", \"kgBahan\": 50, \"kgKristal\": 40, \"kgBrondol\": 10 },\n  { \"karyawanId\": \"2\", \"kgBahan\": 50, \"kgKristal\": 40, \"kgBrondol\": 10 }\n]\n```"
+          },
+          "response": []
+        },
+        {
+          "name": "Batalkan sesi tungku",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"alasan\": \"Salah input hasil masak\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/produksi/sesi/{{sesiId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "produksi",
+                "sesi",
+                "{{sesiId}}"
+              ]
+            },
+            "description": "Untuk sesi yang sudah selesai: seluruh efek stok dikembalikan (bahan masuk lagi, kristal & brondol keluar) dan porsi karyawan dihapus.\n\n**422 bila gaji periode tersebut sudah dibayarkan** — histori pembayaran tidak boleh berubah."
+          },
+          "response": []
+        },
+        {
+          "name": "Tren rendemen harian",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/produksi/tren-rendemen?hari=14&sampai=",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "produksi",
+                "tren-rendemen"
+              ],
+              "query": [
                 {
-                    "name": "Posisi stok",
-                    "request": {
-                        "method": "GET",
-                        "header": [
-                            {
-                                "key": "Accept",
-                                "value": "application/json"
-                            }
-                        ],
-                        "url": {
-                            "raw": "{{baseUrl}}/stok",
-                            "host": ["{{baseUrl}}"],
-                            "path": ["stok"]
-                        },
-                        "description": "```json\n{ \"data\": {\n  \"saldo\": { \"NS 1\": 1886, \"NS 2\": 1978, \"Kecap\": 2014, \"Kristal\": 4075.2, \"Brondol\": 912.67 },\n  \"bahanMentah\": [ { \"kode\": \"ns1\", \"nama\": \"NS 1\", \"label\": \"Bahan Mentah NS 1\", \"saldo\": 1886, \"status\": \"aman\" } ],\n  \"totalBahanMentah\": 5878,\n  \"produkJadi\": [ { \"kode\": \"kristal\", \"saldo\": 4075.2, \"status\": \"aman\" } ],\n  \"ambangMenipis\": 1500\n} }\n```\n\n`status` = `menipis` bila stok bahan mentah di bawah `ambangMenipis` (indikator kuning di UI).\n\n`saldo` bentuknya sama dengan state `stok` di frontend."
-                    },
-                    "response": []
+                  "key": "hari",
+                  "value": "14",
+                  "description": "1-90 hari, default 14"
                 },
                 {
                   "key": "sampai",
@@ -1184,7 +1632,7 @@
           "response": []
         },
         {
-          "name": "Export produksi (CSV)",
+          "name": "Export produksi (CSV/XLSX/PDF)",
           "request": {
             "method": "GET",
             "header": [
@@ -1231,7 +1679,7 @@
                 }
               ]
             },
-            "description": "Rincian per sesi tungku: grade, kg bahan, kedua karyawan, hasil, rendemen.\n\n---\n**Format file** — atur lewat parameter `format`: `csv` (default), `xlsx` (Excel asli, angka bisa di-SUM), atau `pdf` (berkop perusahaan).\n\nCSV:\n\nCSV siap dibuka di Excel: pemisah kolom `;`, desimal koma (`1450000,00`), diawali BOM UTF-8. Nama file otomatis memuat rentang tanggal, mis. `laba-rugi_2026-08-01_sd_2026-08-31.csv`.\n\nDi Postman klik **Save Response -> Save to a file** untuk mengunduhnya.\n\nSetiap export tercatat di audit log (`laporan.export`)."
+            "description": "`format` menerima `csv` (default), `xlsx`, atau `pdf`."
           },
           "response": []
         }
@@ -1264,94 +1712,39 @@
                   "key": "tanggal",
                   "value": "{{tanggalHariIni}}",
                   "description": "Tanggal MANA SAJA dalam minggu yang dimaksud — sistem mengunci ke periode Senin-Jumat. Kosong = minggu berjalan"
-                    "name": "Kartu stok (histori keluar-masuk)",
-                    "request": {
-                        "method": "GET",
-                        "header": [
-                            {
-                                "key": "Accept",
-                                "value": "application/json"
-                            }
-                        ],
-                        "url": {
-                            "raw": "{{baseUrl}}/stok/kartu?kategori=&jenis=&dari=&sampai=&q=&page=1&perPage=50",
-                            "host": ["{{baseUrl}}"],
-                            "path": ["stok", "kartu"],
-                            "query": [
-                                {
-                                    "key": "kategori",
-                                    "value": "",
-                                    "description": "ns1 | ns2 | kecap | kristal | brondol"
-                                },
-                                {
-                                    "key": "jenis",
-                                    "value": "",
-                                    "description": "masuk | keluar"
-                                },
-                                {
-                                    "key": "dari",
-                                    "value": "",
-                                    "description": "YYYY-MM-DD"
-                                },
-                                {
-                                    "key": "sampai",
-                                    "value": "",
-                                    "description": "YYYY-MM-DD"
-                                },
-                                {
-                                    "key": "q",
-                                    "value": "",
-                                    "description": "Cari keterangan"
-                                },
-                                {
-                                    "key": "page",
-                                    "value": "1"
-                                },
-                                {
-                                    "key": "perPage",
-                                    "value": "50",
-                                    "description": "Maks 200"
-                                }
-                            ]
-                        },
-                        "description": "Log append-only seluruh mutasi stok, lengkap dengan `saldoSetelah` untuk rekonsiliasi.\n\n```json\n{ \"data\": [ {\n  \"tanggal\": \"2026-08-13\", \"jenis\": \"Keluar\", \"kategori\": \"NS 1\",\n  \"kategoriLabel\": \"Bahan Mentah NS 1\", \"jumlah\": 100, \"saldoSetelah\": 2186,\n  \"keterangan\": \"Produksi tungku TGK-01\",\n  \"referensiTipe\": \"sesi_tungku\", \"referensiId\": \"1837\"\n} ] }\n```\n\n`referensiTipe`/`referensiId` menunjuk transaksi asal (`pembelian`, `sesi_tungku`, `penjualan`)."
-                    },
-                    "response": []
                 },
                 {
-                    "name": "Stok opname (koreksi manual)",
-                    "request": {
-                        "method": "POST",
-                        "header": [
-                            {
-                                "key": "Accept",
-                                "value": "application/json"
-                            }
-                        ],
-                        "body": {
-                            "mode": "raw",
-                            "raw": "{\n  \"kategori\": \"NS 1\",\n  \"stokFisik\": 1850,\n  \"alasan\": \"Hasil hitung fisik gudang\",\n  \"tanggal\": \"{{tanggalHariIni}}\"\n}",
-                            "options": {
-                                "raw": {
-                                    "language": "json"
-                                }
-                            }
-                        },
-                        "url": {
-                            "raw": "{{baseUrl}}/stok/opname",
-                            "host": ["{{baseUrl}}"],
-                            "path": ["stok", "opname"]
-                        },
-                        "description": "Kirim **jumlah fisik hasil hitung gudang**, bukan selisihnya — selisih dihitung sistem terhadap saldo berjalan lalu dicatat sebagai mutasi biasa di kartu stok (`Stok opname: <alasan>`).\n\nTidak ada jalur mengubah saldo tanpa jejak.\n\n| Field | Wajib |\n|---|---|\n| `kategori` | ya |\n| `stokFisik` | ya (≥ 0) |\n| `alasan` | ya |\n| `tanggal` | tidak (default hari ini) |\n\n**422** bila tidak ada selisih dengan stok sistem.\n\nRole: Owner atau Staff Gudang."
-                    },
-                    "response": []
+                  "key": "sertakanTanpaProduksi",
+                  "value": "",
+                  "description": "1 = ikut tampilkan karyawan tanpa produksi minggu itu"
                 }
-            ]
+              ]
+            },
+            "description": "Setiap baris membawa `totalSebelumBulat` (hasil hitungan asli) dan `total` (nominal yang dibayarkan, dibulatkan ke kelipatan 500)."
+          },
+          "response": []
         },
         {
-            "name": "7. Produksi — Sesi Tungku",
-            "description": "Modul paling penting. 1 sesi = 1 tungku = tepat 2 karyawan. Kristal dan brondol keluar bersamaan dari satu kali masak (brondol bukan sesi terpisah). Banyak tungku berjalan paralel dalam satu hari.",
-            "item": [
+          "name": "Slip gaji karyawan",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/penggajian/slip/{{karyawanId}}?tanggal={{tanggalHariIni}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "penggajian",
+                "slip",
+                "{{karyawanId}}"
+              ],
+              "query": [
                 {
                   "key": "tanggal",
                   "value": "{{tanggalHariIni}}",
@@ -1431,7 +1824,7 @@
           "response": []
         },
         {
-          "name": "Export rekap gaji (CSV)",
+          "name": "Export rekap gaji (CSV/XLSX/PDF)",
           "request": {
             "method": "GET",
             "header": [
@@ -1462,7 +1855,7 @@
                 }
               ]
             },
-            "description": "Rekap gaji satu periode Senin-Jumat beserta tarif yang dipakai dan total sudah/belum dibayar.\n\n---\n**Format file** — atur lewat parameter `format`: `csv` (default), `xlsx` (Excel asli, angka bisa di-SUM), atau `pdf` (berkop perusahaan).\n\nCSV:\n\nCSV siap dibuka di Excel: pemisah kolom `;`, desimal koma (`1450000,00`), diawali BOM UTF-8. Nama file otomatis memuat rentang tanggal, mis. `laba-rugi_2026-08-01_sd_2026-08-31.csv`.\n\nDi Postman klik **Save Response -> Save to a file** untuk mengunduhnya.\n\nSetiap export tercatat di audit log (`laporan.export`)."
+            "description": "`format` menerima `csv` (default), `xlsx`, atau `pdf`."
           },
           "response": []
         }
@@ -1494,236 +1887,140 @@
                   "key": "dari",
                   "value": "",
                   "description": "YYYY-MM-DD"
-                    "name": "Daftar sesi tungku",
-                    "request": {
-                        "method": "GET",
-                        "header": [
-                            {
-                                "key": "Accept",
-                                "value": "application/json"
-                            }
-                        ],
-                        "url": {
-                            "raw": "{{baseUrl}}/produksi/sesi?tanggal=&dari=&sampai=&status=&grade=&karyawanId=&q=&page=1&perPage=50",
-                            "host": ["{{baseUrl}}"],
-                            "path": ["produksi", "sesi"],
-                            "query": [
-                                {
-                                    "key": "tanggal",
-                                    "value": "",
-                                    "description": "Semua tungku yang jalan di 1 hari tertentu"
-                                },
-                                {
-                                    "key": "dari",
-                                    "value": "",
-                                    "description": "YYYY-MM-DD"
-                                },
-                                {
-                                    "key": "sampai",
-                                    "value": "",
-                                    "description": "YYYY-MM-DD"
-                                },
-                                {
-                                    "key": "status",
-                                    "value": "",
-                                    "description": "sedang_diproses | selesai"
-                                },
-                                {
-                                    "key": "grade",
-                                    "value": "",
-                                    "description": "ns1 | ns2 | kecap"
-                                },
-                                {
-                                    "key": "karyawanId",
-                                    "value": "",
-                                    "description": "Sesi yang melibatkan karyawan ini"
-                                },
-                                {
-                                    "key": "q",
-                                    "value": "",
-                                    "description": "Cari kode tungku / nama karyawan"
-                                },
-                                {
-                                    "key": "page",
-                                    "value": "1"
-                                },
-                                {
-                                    "key": "perPage",
-                                    "value": "50",
-                                    "description": "Maks 200"
-                                }
-                            ]
-                        },
-                        "description": "Riwayat ditampilkan **per sesi tungku** (bukan per hari). Menyertakan `ringkasan` produksi harian:\n\n```json\n\"ringkasan\": { \"jumlahSesi\": 14, \"tungkuAktif\": 4, \"kgBahan\": 1755,\n               \"kgKristal\": 997.19, \"kgBrondol\": 204.18,\n               \"totalProduksi\": 1201.37, \"rendemen\": 93.42 }\n```"
-                    },
-                    "response": []
                 },
                 {
-                    "name": "⭐ Mulai sesi tungku",
-                    "event": [
-                        {
-                            "listen": "test",
-                            "script": {
-                                "type": "text/javascript",
-                                "exec": [
-                                    "if (pm.response.code === 201) {",
-                                    "    const d = pm.response.json();",
-                                    "    pm.collectionVariables.set('sesiId', d.data.id);",
-                                    "    console.log('Sesi', d.data.kodeTungku, 'dimulai.');",
-                                    "}"
-                                ]
-                            }
-                        }
-                    ],
-                    "request": {
-                        "method": "POST",
-                        "header": [
-                            {
-                                "key": "Accept",
-                                "value": "application/json"
-                            }
-                        ],
-                        "body": {
-                            "mode": "raw",
-                            "raw": "{\n  \"tanggal\": \"{{tanggalHariIni}}\",\n  \"kodeTungku\": null,\n  \"grade\": \"NS 1\",\n  \"kgBahan\": 100,\n  \"karyawan1Id\": \"{{karyawanId}}\",\n  \"karyawan2Id\": \"{{karyawanId2}}\"\n}",
-                            "options": {
-                                "raw": {
-                                    "language": "json"
-                                }
-                            }
-                        },
-                        "url": {
-                            "raw": "{{baseUrl}}/produksi/sesi",
-                            "host": ["{{baseUrl}}"],
-                            "path": ["produksi", "sesi"]
-                        },
-                        "description": "**Body**\n\n| Field | Wajib | Keterangan |\n|---|---|---|\n| `tanggal` | ya | |\n| `kodeTungku` | tidak | null → otomatis `TGK-01`, `TGK-02`, … per hari |\n| `grade` | ya | Grade bahan mentah yang dimasak |\n| `kgBahan` | ya | > 0 |\n| `karyawan1Id` | ya | |\n| `karyawan2Id` | ya | **Wajib berbeda dari karyawan 1** |\n| `catatan` | tidak | |\n\nStatus awal: `Sedang Diproses`. Stok **belum** dipotong di tahap ini.\n\n**422 bila bahan tidak cukup.** Yang dicek bukan sekadar saldo, tapi saldo **dikurangi kg yang sedang dipegang tungku lain yang belum selesai** — tanpa ini 15 tungku bisa sama-sama dimulai padahal bahan hanya cukup untuk 10.\n\nRole: Owner atau Staff Produksi."
-                    },
-                    "response": []
+                  "key": "sampai",
+                  "value": "",
+                  "description": "YYYY-MM-DD"
                 },
                 {
-                    "name": "⭐⭐ Selesaikan sesi tungku",
-                    "event": [
-                        {
-                            "listen": "test",
-                            "script": {
-                                "type": "text/javascript",
-                                "exec": [
-                                    "if (pm.response.code === 200) {",
-                                    "    const d = pm.response.json();",
-                                    "    console.log(d.message);",
-                                    "    pm.test('Rendemen terhitung', () => pm.expect(d.data.rendemen).to.be.a('number'));",
-                                    "    pm.test('Status selesai', () => pm.expect(d.data.status).to.eql('Selesai'));",
-                                    "}"
-                                ]
-                            }
-                        }
-                    ],
-                    "request": {
-                        "method": "POST",
-                        "header": [
-                            {
-                                "key": "Accept",
-                                "value": "application/json"
-                            }
-                        ],
-                        "body": {
-                            "mode": "raw",
-                            "raw": "{\n  \"kgKristal\": 80,\n  \"kgBrondol\": 20\n}",
-                            "options": {
-                                "raw": {
-                                    "language": "json"
-                                }
-                            }
-                        },
-                        "url": {
-                            "raw": "{{baseUrl}}/produksi/sesi/{{sesiId}}/selesai",
-                            "host": ["{{baseUrl}}"],
-                            "path": ["produksi", "sesi", "{{sesiId}}", "selesai"]
-                        },
-                        "description": "Kg yang dikirim adalah **hasil SATU TUNGKU (gabungan 2 karyawan), bukan per orang**.\n\n### Efek otomatis\n\n1. `rendemen = (kgKristal + kgBrondol) ÷ kgBahan × 100%`\n2. Stok bahan mentah grade tsb **berkurang** `kgBahan`\n3. Stok Kristal **bertambah** `kgKristal`, Brondol **bertambah** `kgBrondol`\n4. 3 baris kartu stok (1 keluar bahan, 2 masuk produk jadi)\n5. **Hasil dibagi rata ÷2 ke kedua karyawan** dan disimpan ke `produksi_karyawan` — sumber data penggajian\n\n### Contoh resmi client\n\n100 kg bahan → 80 kg kristal + 20 kg brondol, dikerjakan Pardi & Asep:\n\n```json\n{\n  \"message\": \"Sesi TGK-01 selesai. Rendemen 100%, masing-masing karyawan tercatat 40 kg kristal & 10 kg brondol.\",\n  \"data\": { \"kgKristal\": 80, \"kgBrondol\": 20, \"rendemen\": 100, \"status\": \"Selesai\" }\n}\n```\n\nMasing-masing tercatat **50 kg bahan, 40 kg kristal, 10 kg brondol**. Untuk angka ganjil, porsi kedua dihitung sebagai sisa sehingga jumlah 2 porsi selalu persis sama dengan total sesi.\n\n### Ditolak (422) bila\n\n- Sesi sudah berstatus Selesai (tidak bisa dobel potong stok)\n- Total hasil 0\n- **Total hasil melebihi bahan mentah** (kekekalan massa)\n- Stok bahan mentah tidak lagi mencukupi"
-                    },
-                    "response": []
+                  "key": "eksportirId",
+                  "value": ""
                 },
                 {
-                    "name": "Detail sesi (+ porsi karyawan)",
-                    "request": {
-                        "method": "GET",
-                        "header": [
-                            {
-                                "key": "Accept",
-                                "value": "application/json"
-                            }
-                        ],
-                        "url": {
-                            "raw": "{{baseUrl}}/produksi/sesi/{{sesiId}}",
-                            "host": ["{{baseUrl}}"],
-                            "path": ["produksi", "sesi", "{{sesiId}}"]
-                        },
-                        "description": "Menyertakan hasil pembagian otomatis:\n\n```json\n\"porsiKaryawan\": [\n  { \"karyawanId\": \"1\", \"kgBahan\": 50, \"kgKristal\": 40, \"kgBrondol\": 10 },\n  { \"karyawanId\": \"2\", \"kgBahan\": 50, \"kgKristal\": 40, \"kgBrondol\": 10 }\n]\n```"
-                    },
-                    "response": []
+                  "key": "q",
+                  "value": "",
+                  "description": "Cari nomor invoice / nama eksportir"
                 },
                 {
-                    "name": "Batalkan sesi tungku",
-                    "request": {
-                        "method": "DELETE",
-                        "header": [
-                            {
-                                "key": "Accept",
-                                "value": "application/json"
-                            }
-                        ],
-                        "body": {
-                            "mode": "raw",
-                            "raw": "{\n  \"alasan\": \"Salah input hasil masak\"\n}",
-                            "options": {
-                                "raw": {
-                                    "language": "json"
-                                }
-                            }
-                        },
-                        "url": {
-                            "raw": "{{baseUrl}}/produksi/sesi/{{sesiId}}",
-                            "host": ["{{baseUrl}}"],
-                            "path": ["produksi", "sesi", "{{sesiId}}"]
-                        },
-                        "description": "Untuk sesi yang sudah selesai: seluruh efek stok dikembalikan (bahan masuk lagi, kristal & brondol keluar) dan porsi karyawan dihapus.\n\n**422 bila gaji periode tersebut sudah dibayarkan** — histori pembayaran tidak boleh berubah."
-                    },
-                    "response": []
+                  "key": "page",
+                  "value": "1"
                 },
                 {
-                    "name": "Tren rendemen harian",
-                    "request": {
-                        "method": "GET",
-                        "header": [
-                            {
-                                "key": "Accept",
-                                "value": "application/json"
-                            }
-                        ],
-                        "url": {
-                            "raw": "{{baseUrl}}/produksi/tren-rendemen?hari=14&sampai=",
-                            "host": ["{{baseUrl}}"],
-                            "path": ["produksi", "tren-rendemen"],
-                            "query": [
-                                {
-                                    "key": "hari",
-                                    "value": "14",
-                                    "description": "1-90 hari, default 14"
-                                },
-                                {
-                                    "key": "sampai",
-                                    "value": "",
-                                    "description": "Tanggal akhir, default hari ini"
-                                }
-                            ]
-                        },
-                        "description": "Untuk grafik \"Tren Rendemen 14 Hari Terakhir\".\n\n```json\n{ \"data\": [ { \"tanggal\": \"2026-08-13\", \"kgBahan\": 1755, \"kgHasil\": 1201.37, \"rendemen\": 93.4 } ] }\n```"
-                    },
-                    "response": []
+                  "key": "perPage",
+                  "value": "25",
+                  "description": "Maks 200"
                 }
-            ]
+              ]
+            },
+            "description": "Setiap baris menampilkan breakdown kg & harga masing-masing jenis (bukan cuma total gabungan). Menyertakan `ringkasan` bulan berjalan:\n\n```json\n\"ringkasan\": { \"rupiah\": 322639265, \"kgKristal\": 11840, \"kgBrondol\": 2570,\n               \"rupiahKristal\": 290080000, \"rupiahBrondol\": 42405000,\n               \"jumlahTransaksi\": 7 }\n```"
+          },
+          "response": []
+        },
+        {
+          "name": "⭐ Transaksi penjualan baru (2 baris)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const d = pm.response.json();",
+                  "    pm.collectionVariables.set('penjualanId', d.data.id);",
+                  "    console.log('Invoice:', d.data.noInvoice, '| total:', d.data.total);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tanggal\": \"{{tanggalHariIni}}\",\n  \"eksportirId\": \"{{eksportirId}}\",\n  \"kristal\": { \"kg\": 2000, \"harga\": 24500 },\n  \"brondol\": { \"kg\": 500, \"harga\": 16500 },\n  \"statusPembayaran\": \"lunas\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/penjualan",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "penjualan"
+              ]
+            },
+            "description": "**Satu invoice, dua baris terpisah** dengan kg dan harga masing-masing — bukan harga rata-rata gabungan, dan bukan dua transaksi.\n\n| Field | Wajib | Keterangan |\n|---|---|---|\n| `tanggal` | ya | |\n| `eksportirId` | ya | |\n| `kristal` | opsional* | `{ kg, harga }` — kirim `null` / hilangkan bila tidak dijual |\n| `brondol` | opsional* | `{ kg, harga }` |\n| `statusPembayaran` | tidak | `lunas` (default) / `belum_lunas` |\n| `catatan` | tidak | |\n\n\\* **Minimal salah satu baris harus diisi.**\n\n### Kalkulasi dua arah\n\nLogic \"edit subtotal → harga per kg menyesuaikan, kilogram tetap, baris satunya tidak terpengaruh\" dikerjakan **di frontend**. Backend menerima `kg` + `harga` final lalu menghitung ulang subtotal & total sendiri, sehingga angka yang tersimpan selalu konsisten.\n\n### Efek otomatis\n\nStok Kristal/Brondol berkurang sesuai baris yang diisi, pemasukan masuk ke laporan keuangan, dan response membawa objek `invoice` siap cetak dengan rincian 2 baris.\n\n### Validasi stok\n\n**422** bila kg melebihi stok, dengan field error yang menunjuk baris bermasalah (`kristal.kg` / `brondol.kg`) dan **tidak menyisakan perubahan apa pun** — walau baris kristal sempat diproses lebih dulu, seluruh transaksi di-rollback.\n\nRole: Owner."
+          },
+          "response": []
+        },
+        {
+          "name": "Detail penjualan (+ data invoice)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/penjualan/{{penjualanId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "penjualan",
+                "{{penjualanId}}"
+              ]
+            },
+            "description": "```json\n\"invoice\": {\n  \"nomor\": \"INV/2026/0040\", \"tanggal\": \"13 Agustus 2026\",\n  \"eksportir\": \"PT Global Sweet Export\",\n  \"baris\": [\n    { \"jenis\": \"Gula Kristal\", \"kilogram\": 2000, \"hargaPerKg\": 24500, \"subtotal\": 49000000 },\n    { \"jenis\": \"Gula Brondol\", \"kilogram\": 500, \"hargaPerKg\": 16500, \"subtotal\": 8250000 }\n  ],\n  \"total\": 57250000, \"statusPembayaran\": \"Lunas\"\n}\n```"
+          },
+          "response": []
+        },
+        {
+          "name": "Ubah status pembayaran",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"statusPembayaran\": \"lunas\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/penjualan/{{penjualanId}}/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "penjualan",
+                "{{penjualanId}}",
+                "status"
+              ]
+            },
+            "description": "`statusPembayaran`: `lunas` / `belum_lunas`. Disiapkan untuk kemungkinan perubahan ke sistem termin."
+          },
+          "response": []
         },
         {
           "name": "Batalkan penjualan",
@@ -1759,7 +2056,7 @@
           "response": []
         },
         {
-          "name": "Export penjualan (CSV)",
+          "name": "Export penjualan (CSV/XLSX/PDF)",
           "request": {
             "method": "GET",
             "header": [
@@ -1805,7 +2102,7 @@
                 }
               ]
             },
-            "description": "Rincian invoice dengan kolom kristal dan brondol terpisah (kg, harga, subtotal).\n\n---\n**Format file** — atur lewat parameter `format`: `csv` (default), `xlsx` (Excel asli, angka bisa di-SUM), atau `pdf` (berkop perusahaan).\n\nCSV:\n\nCSV siap dibuka di Excel: pemisah kolom `;`, desimal koma (`1450000,00`), diawali BOM UTF-8. Nama file otomatis memuat rentang tanggal, mis. `laba-rugi_2026-08-01_sd_2026-08-31.csv`.\n\nDi Postman klik **Save Response -> Save to a file** untuk mengunduhnya.\n\nSetiap export tercatat di audit log (`laporan.export`)."
+            "description": "`format` menerima `csv` (default), `xlsx`, atau `pdf`."
           },
           "response": []
         }
@@ -1835,548 +2132,264 @@
                 "laba-rugi"
               ],
               "query": [
-            "name": "8. Penggajian",
-            "description": "Periode gaji Senin s.d. JUMAT (bukan Senin-Minggu), dibayarkan setiap Jumat.",
-            "item": [
                 {
-                    "name": "Rekap gaji mingguan",
-                    "request": {
-                        "method": "GET",
-                        "header": [
-                            {
-                                "key": "Accept",
-                                "value": "application/json"
-                            }
-                        ],
-                        "url": {
-                            "raw": "{{baseUrl}}/penggajian?tanggal={{tanggalHariIni}}&sertakanTanpaProduksi=",
-                            "host": ["{{baseUrl}}"],
-                            "path": ["penggajian"],
-                            "query": [
-                                {
-                                    "key": "tanggal",
-                                    "value": "{{tanggalHariIni}}",
-                                    "description": "Tanggal MANA SAJA dalam minggu yang dimaksud — sistem mengunci ke periode Senin-Jumat. Kosong = minggu berjalan"
-                                },
-                                {
-                                    "key": "sertakanTanpaProduksi",
-                                    "value": "",
-                                    "description": "1 = ikut tampilkan karyawan tanpa produksi minggu itu"
-                                }
-                            ]
-                        },
-                        "description": "Untuk navigasi \"Minggu Sebelumnya / Minggu Ini / Minggu Berikutnya\", cukup kirim tanggal mana saja dalam minggu tujuan (mis. `tanggal` − 7 hari).\n\n```json\n{ \"data\": {\n  \"periode\": { \"senin\": \"2026-08-10\", \"jumat\": \"2026-08-14\",\n               \"label\": \"10 Agustus 2026 — 14 Agustus 2026\" },\n  \"tarif\": { \"kristal\": 1150, \"brondol\": 800, \"uangMakan\": 5000 },\n  \"baris\": [ {\n    \"karyawanId\": \"17\", \"nama\": \"Hendra Gunawan\",\n    \"kgKristal\": 242.18, \"kgBrondol\": 38.53, \"hariKerja\": 4,\n    \"upahKristal\": 278507, \"upahBrondol\": 30824, \"uangMakan\": 20000,\n    \"total\": 329331, \"dibayar\": false, \"dibayarPada\": null,\n    \"adaPerubahanSetelahDibayar\": false\n  } ],\n  \"ringkasan\": { \"totalGaji\": 5934030.5, \"sudahDibayar\": 0,\n                 \"belumDibayar\": 5934030.5, \"jumlahKaryawan\": 28 }\n} }\n```\n\n### Aturan perhitungan\n\n- `hariKerja` = jumlah **tanggal berbeda**. Ikut 3 sesi tungku dalam 1 hari tetap **1 hari kerja**, tapi kg-nya tetap terakumulasi dari ketiga sesi.\n- `uangMakan` = hari kerja × tarif harian.\n- Upah memakai **tarif yang berlaku pada tanggal produksi**, bukan tarif terbaru. Kenaikan tarif di tengah minggu hanya berlaku untuk hari sesudahnya.\n- Baris yang sudah dibayar menampilkan angka **snapshot**; `adaPerubahanSetelahDibayar: true` menandai data produksi yang berubah setelah pembayaran.\n\nBentuk `baris` sama persis dengan tipe `BarisGaji` di frontend."
-                    },
-                    "response": []
+                  "key": "periode",
+                  "value": "bulan_ini",
+                  "description": "bulan_ini (default) | bulan_lalu | custom"
                 },
                 {
-                    "name": "Slip gaji karyawan",
-                    "request": {
-                        "method": "GET",
-                        "header": [
-                            {
-                                "key": "Accept",
-                                "value": "application/json"
-                            }
-                        ],
-                        "url": {
-                            "raw": "{{baseUrl}}/penggajian/slip/{{karyawanId}}?tanggal={{tanggalHariIni}}",
-                            "host": ["{{baseUrl}}"],
-                            "path": ["penggajian", "slip", "{{karyawanId}}"],
-                            "query": [
-                                {
-                                    "key": "tanggal",
-                                    "value": "{{tanggalHariIni}}",
-                                    "description": "Tanggal dalam minggu yang dimaksud"
-                                }
-                            ]
-                        },
-                        "description": "Rincian lengkap satu karyawan untuk dicetak: periode, tarif yang dipakai, kg kristal, kg brondol, hari kerja, upah kristal, upah brondol, uang makan, total, dan status.\n\n**422** bila karyawan tidak punya catatan produksi pada periode itu."
-                    },
-                    "response": []
+                  "key": "dari",
+                  "value": "",
+                  "description": "Wajib bila periode=custom"
                 },
                 {
-                    "name": "Bayar gaji 1 karyawan",
-                    "request": {
-                        "method": "POST",
-                        "header": [
-                            {
-                                "key": "Accept",
-                                "value": "application/json"
-                            }
-                        ],
-                        "body": {
-                            "mode": "raw",
-                            "raw": "{\n  \"tanggal\": \"{{tanggalHariIni}}\"\n}",
-                            "options": {
-                                "raw": {
-                                    "language": "json"
-                                }
-                            }
-                        },
-                        "url": {
-                            "raw": "{{baseUrl}}/penggajian/{{karyawanId}}/bayar",
-                            "host": ["{{baseUrl}}"],
-                            "path": ["penggajian", "{{karyawanId}}", "bayar"]
-                        },
-                        "description": "Membekukan angka gaji periode tersebut sebagai snapshot lalu menandainya **Sudah Dibayar** (dengan timestamp & pelaku).\n\n**Idempoten** — memanggil ulang untuk karyawan yang sudah dibayar tidak mengubah apa pun dan tidak error.\n\n**422** bila karyawan tidak punya produksi pada periode itu.\n\nRole: Owner."
-                    },
-                    "response": []
-                },
-                {
-                    "name": "Bayar semua gaji minggu ini",
-                    "request": {
-                        "method": "POST",
-                        "header": [
-                            {
-                                "key": "Accept",
-                                "value": "application/json"
-                            }
-                        ],
-                        "body": {
-                            "mode": "raw",
-                            "raw": "{\n  \"tanggal\": \"{{tanggalHariIni}}\"\n}",
-                            "options": {
-                                "raw": {
-                                    "language": "json"
-                                }
-                            }
-                        },
-                        "url": {
-                            "raw": "{{baseUrl}}/penggajian/bayar-semua",
-                            "host": ["{{baseUrl}}"],
-                            "path": ["penggajian", "bayar-semua"]
-                        },
-                        "description": "Membayar seluruh karyawan yang belum dibayar pada periode tersebut sekaligus.\n\n```json\n{ \"message\": \"28 gaji karyawan ditandai sudah dibayar.\",\n  \"data\": { \"jumlahKaryawan\": 28, \"totalDibayar\": 5934030.5 } }\n```\n\n**422** bila tidak ada yang perlu dibayar. Role: Owner."
-                    },
-                    "response": []
+                  "key": "sampai",
+                  "value": "",
+                  "description": "Wajib bila periode=custom"
                 }
-            ]
+              ]
+            },
+            "description": "```\nPendapatan       = total penjualan ke eksportir\nHPP              = pembelian bahan + total gaji (termasuk uang makan)\nBiaya Operasional = input manual biaya lain-lain\nLaba Bersih      = Pendapatan − HPP − Biaya Operasional\n```\n\n```json\n{ \"data\": {\n  \"periode\": { \"dari\": \"2026-08-01\", \"sampai\": \"2026-08-31\" },\n  \"pendapatan\": 322639265,\n  \"hpp\": {\n    \"bahan\": 168420000,\n    \"gaji\": { \"upahKristal\": 30110000, \"upahBrondol\": 4213381.5,\n              \"uangMakan\": 3700000, \"total\": 38023381.5 },\n    \"total\": 206443381.5\n  },\n  \"biayaOperasional\": 12700000,\n  \"labaBersih\": 103495883.5,\n  \"margin\": 32.08\n} }\n```\n\nSeluruh angka diturunkan dari transaksi riil — tidak ada nilai hardcode/estimasi."
+          },
+          "response": []
         },
         {
-            "name": "9. Penjualan ke Eksportir",
-            "item": [
+          "name": "Tren pendapatan vs biaya per bulan",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/keuangan/tren?bulan=6&sampai=",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "keuangan",
+                "tren"
+              ],
+              "query": [
                 {
-                    "name": "Daftar penjualan",
-                    "request": {
-                        "method": "GET",
-                        "header": [
-                            {
-                                "key": "Accept",
-                                "value": "application/json"
-                            }
-                        ],
-                        "url": {
-                            "raw": "{{baseUrl}}/penjualan?dari=&sampai=&eksportirId=&q=&page=1&perPage=25",
-                            "host": ["{{baseUrl}}"],
-                            "path": ["penjualan"],
-                            "query": [
-                                {
-                                    "key": "dari",
-                                    "value": "",
-                                    "description": "YYYY-MM-DD"
-                                },
-                                {
-                                    "key": "sampai",
-                                    "value": "",
-                                    "description": "YYYY-MM-DD"
-                                },
-                                {
-                                    "key": "eksportirId",
-                                    "value": ""
-                                },
-                                {
-                                    "key": "q",
-                                    "value": "",
-                                    "description": "Cari nomor invoice / nama eksportir"
-                                },
-                                {
-                                    "key": "page",
-                                    "value": "1"
-                                },
-                                {
-                                    "key": "perPage",
-                                    "value": "25",
-                                    "description": "Maks 200"
-                                }
-                            ]
-                        },
-                        "description": "Setiap baris menampilkan breakdown kg & harga masing-masing jenis (bukan cuma total gabungan). Menyertakan `ringkasan` bulan berjalan:\n\n```json\n\"ringkasan\": { \"rupiah\": 322639265, \"kgKristal\": 11840, \"kgBrondol\": 2570,\n               \"rupiahKristal\": 290080000, \"rupiahBrondol\": 42405000,\n               \"jumlahTransaksi\": 7 }\n```"
-                    },
-                    "response": []
+                  "key": "bulan",
+                  "value": "6",
+                  "description": "1-36 bulan, default 6"
                 },
                 {
-                    "name": "⭐ Transaksi penjualan baru (2 baris)",
-                    "event": [
-                        {
-                            "listen": "test",
-                            "script": {
-                                "type": "text/javascript",
-                                "exec": [
-                                    "if (pm.response.code === 201) {",
-                                    "    const d = pm.response.json();",
-                                    "    pm.collectionVariables.set('penjualanId', d.data.id);",
-                                    "    console.log('Invoice:', d.data.noInvoice, '| total:', d.data.total);",
-                                    "}"
-                                ]
-                            }
-                        }
-                    ],
-                    "request": {
-                        "method": "POST",
-                        "header": [
-                            {
-                                "key": "Accept",
-                                "value": "application/json"
-                            }
-                        ],
-                        "body": {
-                            "mode": "raw",
-                            "raw": "{\n  \"tanggal\": \"{{tanggalHariIni}}\",\n  \"eksportirId\": \"{{eksportirId}}\",\n  \"kristal\": { \"kg\": 2000, \"harga\": 24500 },\n  \"brondol\": { \"kg\": 500, \"harga\": 16500 },\n  \"statusPembayaran\": \"lunas\"\n}",
-                            "options": {
-                                "raw": {
-                                    "language": "json"
-                                }
-                            }
-                        },
-                        "url": {
-                            "raw": "{{baseUrl}}/penjualan",
-                            "host": ["{{baseUrl}}"],
-                            "path": ["penjualan"]
-                        },
-                        "description": "**Satu invoice, dua baris terpisah** dengan kg dan harga masing-masing — bukan harga rata-rata gabungan, dan bukan dua transaksi.\n\n| Field | Wajib | Keterangan |\n|---|---|---|\n| `tanggal` | ya | |\n| `eksportirId` | ya | |\n| `kristal` | opsional* | `{ kg, harga }` — kirim `null` / hilangkan bila tidak dijual |\n| `brondol` | opsional* | `{ kg, harga }` |\n| `statusPembayaran` | tidak | `lunas` (default) / `belum_lunas` |\n| `catatan` | tidak | |\n\n\\* **Minimal salah satu baris harus diisi.**\n\n### Kalkulasi dua arah\n\nLogic \"edit subtotal → harga per kg menyesuaikan, kilogram tetap, baris satunya tidak terpengaruh\" dikerjakan **di frontend**. Backend menerima `kg` + `harga` final lalu menghitung ulang subtotal & total sendiri, sehingga angka yang tersimpan selalu konsisten.\n\n### Efek otomatis\n\nStok Kristal/Brondol berkurang sesuai baris yang diisi, pemasukan masuk ke laporan keuangan, dan response membawa objek `invoice` siap cetak dengan rincian 2 baris.\n\n### Validasi stok\n\n**422** bila kg melebihi stok, dengan field error yang menunjuk baris bermasalah (`kristal.kg` / `brondol.kg`) dan **tidak menyisakan perubahan apa pun** — walau baris kristal sempat diproses lebih dulu, seluruh transaksi di-rollback.\n\nRole: Owner."
-                    },
-                    "response": []
-                },
-                {
-                    "name": "Detail penjualan (+ data invoice)",
-                    "request": {
-                        "method": "GET",
-                        "header": [
-                            {
-                                "key": "Accept",
-                                "value": "application/json"
-                            }
-                        ],
-                        "url": {
-                            "raw": "{{baseUrl}}/penjualan/{{penjualanId}}",
-                            "host": ["{{baseUrl}}"],
-                            "path": ["penjualan", "{{penjualanId}}"]
-                        },
-                        "description": "```json\n\"invoice\": {\n  \"nomor\": \"INV/2026/0040\", \"tanggal\": \"13 Agustus 2026\",\n  \"eksportir\": \"PT Global Sweet Export\",\n  \"baris\": [\n    { \"jenis\": \"Gula Kristal\", \"kilogram\": 2000, \"hargaPerKg\": 24500, \"subtotal\": 49000000 },\n    { \"jenis\": \"Gula Brondol\", \"kilogram\": 500, \"hargaPerKg\": 16500, \"subtotal\": 8250000 }\n  ],\n  \"total\": 57250000, \"statusPembayaran\": \"Lunas\"\n}\n```"
-                    },
-                    "response": []
-                },
-                {
-                    "name": "Ubah status pembayaran",
-                    "request": {
-                        "method": "PATCH",
-                        "header": [
-                            {
-                                "key": "Accept",
-                                "value": "application/json"
-                            }
-                        ],
-                        "body": {
-                            "mode": "raw",
-                            "raw": "{\n  \"statusPembayaran\": \"lunas\"\n}",
-                            "options": {
-                                "raw": {
-                                    "language": "json"
-                                }
-                            }
-                        },
-                        "url": {
-                            "raw": "{{baseUrl}}/penjualan/{{penjualanId}}/status",
-                            "host": ["{{baseUrl}}"],
-                            "path": ["penjualan", "{{penjualanId}}", "status"]
-                        },
-                        "description": "`statusPembayaran`: `lunas` / `belum_lunas`. Disiapkan untuk kemungkinan perubahan ke sistem termin."
-                    },
-                    "response": []
-                },
-                {
-                    "name": "Batalkan penjualan",
-                    "request": {
-                        "method": "DELETE",
-                        "header": [
-                            {
-                                "key": "Accept",
-                                "value": "application/json"
-                            }
-                        ],
-                        "body": {
-                            "mode": "raw",
-                            "raw": "{\n  \"alasan\": \"Barang dikembalikan eksportir\"\n}",
-                            "options": {
-                                "raw": {
-                                    "language": "json"
-                                }
-                            }
-                        },
-                        "url": {
-                            "raw": "{{baseUrl}}/penjualan/{{penjualanId}}",
-                            "host": ["{{baseUrl}}"],
-                            "path": ["penjualan", "{{penjualanId}}"]
-                        },
-                        "description": "Stok Kristal & Brondol dikembalikan lewat mutasi balik, record di-soft delete, pemasukan otomatis hilang dari laporan keuangan."
-                    },
-                    "response": []
+                  "key": "sampai",
+                  "value": "",
+                  "description": "Bulan acuan, default bulan ini"
                 }
-            ]
+              ]
+            },
+            "description": "Untuk grafik batang \"Pendapatan vs Biaya per Bulan\" dan line \"Tren Margin Keuntungan (%)\".\n\n```json\n{ \"data\": [ {\n  \"bulan\": \"2026-03\", \"label\": \"Mar 26\",\n  \"pendapatan\": 702481372, \"pembelian\": 394532100, \"gaji\": 40239062.5,\n  \"biayaOperasional\": 12100000, \"totalBiaya\": 446871162.5,\n  \"laba\": 255610209.5, \"margin\": 36.4\n} ] }\n```"
+          },
+          "response": []
         },
         {
-            "name": "10. Keuangan & Laporan",
-            "description": "Khusus Owner. Staff Gudang & Staff Produksi menerima 403 di seluruh folder ini.",
-            "item": [
+          "name": "Daftar biaya operasional",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/keuangan/biaya?dari=&sampai=&kategori=&page=1&perPage=50",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "keuangan",
+                "biaya"
+              ],
+              "query": [
                 {
-                    "name": "Laporan laba rugi",
-                    "request": {
-                        "method": "GET",
-                        "header": [
-                            {
-                                "key": "Accept",
-                                "value": "application/json"
-                            }
-                        ],
-                        "url": {
-                            "raw": "{{baseUrl}}/keuangan/laba-rugi?periode=bulan_ini&dari=&sampai=",
-                            "host": ["{{baseUrl}}"],
-                            "path": ["keuangan", "laba-rugi"],
-                            "query": [
-                                {
-                                    "key": "periode",
-                                    "value": "bulan_ini",
-                                    "description": "bulan_ini (default) | bulan_lalu | custom"
-                                },
-                                {
-                                    "key": "dari",
-                                    "value": "",
-                                    "description": "Wajib bila periode=custom"
-                                },
-                                {
-                                    "key": "sampai",
-                                    "value": "",
-                                    "description": "Wajib bila periode=custom"
-                                }
-                            ]
-                        },
-                        "description": "```\nPendapatan       = total penjualan ke eksportir\nHPP              = pembelian bahan + total gaji (termasuk uang makan)\nBiaya Operasional = input manual biaya lain-lain\nLaba Bersih      = Pendapatan − HPP − Biaya Operasional\n```\n\n```json\n{ \"data\": {\n  \"periode\": { \"dari\": \"2026-08-01\", \"sampai\": \"2026-08-31\" },\n  \"pendapatan\": 322639265,\n  \"hpp\": {\n    \"bahan\": 168420000,\n    \"gaji\": { \"upahKristal\": 30110000, \"upahBrondol\": 4213381.5,\n              \"uangMakan\": 3700000, \"total\": 38023381.5 },\n    \"total\": 206443381.5\n  },\n  \"biayaOperasional\": 12700000,\n  \"labaBersih\": 103495883.5,\n  \"margin\": 32.08\n} }\n```\n\nSeluruh angka diturunkan dari transaksi riil — tidak ada nilai hardcode/estimasi."
-                    },
-                    "response": []
+                  "key": "dari",
+                  "value": "",
+                  "description": "YYYY-MM-DD"
                 },
                 {
-                    "name": "Tren pendapatan vs biaya per bulan",
-                    "request": {
-                        "method": "GET",
-                        "header": [
-                            {
-                                "key": "Accept",
-                                "value": "application/json"
-                            }
-                        ],
-                        "url": {
-                            "raw": "{{baseUrl}}/keuangan/tren?bulan=6&sampai=",
-                            "host": ["{{baseUrl}}"],
-                            "path": ["keuangan", "tren"],
-                            "query": [
-                                {
-                                    "key": "bulan",
-                                    "value": "6",
-                                    "description": "1-36 bulan, default 6"
-                                },
-                                {
-                                    "key": "sampai",
-                                    "value": "",
-                                    "description": "Bulan acuan, default bulan ini"
-                                }
-                            ]
-                        },
-                        "description": "Untuk grafik batang \"Pendapatan vs Biaya per Bulan\" dan line \"Tren Margin Keuntungan (%)\".\n\n```json\n{ \"data\": [ {\n  \"bulan\": \"2026-03\", \"label\": \"Mar 26\",\n  \"pendapatan\": 702481372, \"pembelian\": 394532100, \"gaji\": 40239062.5,\n  \"biayaOperasional\": 12100000, \"totalBiaya\": 446871162.5,\n  \"laba\": 255610209.5, \"margin\": 36.4\n} ] }\n```"
-                    },
-                    "response": []
+                  "key": "sampai",
+                  "value": "",
+                  "description": "YYYY-MM-DD"
                 },
                 {
-                    "name": "Daftar biaya operasional",
-                    "request": {
-                        "method": "GET",
-                        "header": [
-                            {
-                                "key": "Accept",
-                                "value": "application/json"
-                            }
-                        ],
-                        "url": {
-                            "raw": "{{baseUrl}}/keuangan/biaya?dari=&sampai=&kategori=&page=1&perPage=50",
-                            "host": ["{{baseUrl}}"],
-                            "path": ["keuangan", "biaya"],
-                            "query": [
-                                {
-                                    "key": "dari",
-                                    "value": "",
-                                    "description": "YYYY-MM-DD"
-                                },
-                                {
-                                    "key": "sampai",
-                                    "value": "",
-                                    "description": "YYYY-MM-DD"
-                                },
-                                {
-                                    "key": "kategori",
-                                    "value": "",
-                                    "description": "listrik | transport | sewa | lainnya"
-                                },
-                                {
-                                    "key": "page",
-                                    "value": "1"
-                                },
-                                {
-                                    "key": "perPage",
-                                    "value": "50",
-                                    "description": "Maks 200"
-                                }
-                            ]
-                        },
-                        "description": "Menyertakan `ringkasan.total` untuk periode yang difilter."
-                    },
-                    "response": []
+                  "key": "kategori",
+                  "value": "",
+                  "description": "listrik | transport | sewa | lainnya"
                 },
                 {
-                    "name": "⭐ Tambah biaya operasional",
-                    "event": [
-                        {
-                            "listen": "test",
-                            "script": {
-                                "type": "text/javascript",
-                                "exec": [
-                                    "if (pm.response.code === 201) {",
-                                    "    pm.collectionVariables.set('biayaId', pm.response.json().data.id);",
-                                    "}"
-                                ]
-                            }
-                        }
-                    ],
-                    "request": {
-                        "method": "POST",
-                        "header": [
-                            {
-                                "key": "Accept",
-                                "value": "application/json"
-                            }
-                        ],
-                        "body": {
-                            "mode": "raw",
-                            "raw": "{\n  \"tanggal\": \"{{tanggalHariIni}}\",\n  \"keterangan\": \"Tagihan listrik pabrik\",\n  \"kategori\": \"Listrik\",\n  \"jumlah\": 2500000\n}",
-                            "options": {
-                                "raw": {
-                                    "language": "json"
-                                }
-                            }
-                        },
-                        "url": {
-                            "raw": "{{baseUrl}}/keuangan/biaya",
-                            "host": ["{{baseUrl}}"],
-                            "path": ["keuangan", "biaya"]
-                        },
-                        "description": "`kategori`: `Listrik` · `Transport` · `Sewa` · `Lainnya` (boleh huruf kecil). `jumlah` harus > 0."
-                    },
-                    "response": []
+                  "key": "page",
+                  "value": "1"
                 },
                 {
-                    "name": "Ubah biaya operasional",
-                    "request": {
-                        "method": "PUT",
-                        "header": [
-                            {
-                                "key": "Accept",
-                                "value": "application/json"
-                            }
-                        ],
-                        "body": {
-                            "mode": "raw",
-                            "raw": "{\n  \"jumlah\": 3000000\n}",
-                            "options": {
-                                "raw": {
-                                    "language": "json"
-                                }
-                            }
-                        },
-                        "url": {
-                            "raw": "{{baseUrl}}/keuangan/biaya/{{biayaId}}",
-                            "host": ["{{baseUrl}}"],
-                            "path": ["keuangan", "biaya", "{{biayaId}}"]
-                        },
-                        "description": "Patch parsial — kirim hanya field yang berubah."
-                    },
-                    "response": []
+                  "key": "perPage",
+                  "value": "50",
+                  "description": "Maks 200"
+                }
+              ]
+            },
+            "description": "Menyertakan `ringkasan.total` untuk periode yang difilter."
+          },
+          "response": []
+        },
+        {
+          "name": "⭐ Tambah biaya operasional",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    pm.collectionVariables.set('biayaId', pm.response.json().data.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tanggal\": \"{{tanggalHariIni}}\",\n  \"keterangan\": \"Tagihan listrik pabrik\",\n  \"kategori\": \"Listrik\",\n  \"jumlah\": 2500000\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/keuangan/biaya",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "keuangan",
+                "biaya"
+              ]
+            },
+            "description": "`kategori`: `Listrik` · `Transport` · `Sewa` · `Lainnya` (boleh huruf kecil). `jumlah` harus > 0."
+          },
+          "response": []
+        },
+        {
+          "name": "Ubah biaya operasional",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"jumlah\": 3000000\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/keuangan/biaya/{{biayaId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "keuangan",
+                "biaya",
+                "{{biayaId}}"
+              ]
+            },
+            "description": "Patch parsial — kirim hanya field yang berubah."
+          },
+          "response": []
+        },
+        {
+          "name": "Hapus biaya operasional",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/keuangan/biaya/{{biayaId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "keuangan",
+                "biaya",
+                "{{biayaId}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Audit log",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/audit-log?aksi=&userId=&dari=&sampai=&page=1&perPage=50",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "audit-log"
+              ],
+              "query": [
+                {
+                  "key": "aksi",
+                  "value": "",
+                  "description": "Prefix, mis. harga. / produksi. / gaji. / stok."
                 },
                 {
-                    "name": "Hapus biaya operasional",
-                    "request": {
-                        "method": "DELETE",
-                        "header": [
-                            {
-                                "key": "Accept",
-                                "value": "application/json"
-                            }
-                        ],
-                        "url": {
-                            "raw": "{{baseUrl}}/keuangan/biaya/{{biayaId}}",
-                            "host": ["{{baseUrl}}"],
-                            "path": ["keuangan", "biaya", "{{biayaId}}"]
-                        }
-                    },
-                    "response": []
+                  "key": "userId",
+                  "value": "",
+                  "description": "Filter pelaku"
                 },
                 {
-                    "name": "Audit log",
-                    "request": {
-                        "method": "GET",
-                        "header": [
-                            {
-                                "key": "Accept",
-                                "value": "application/json"
-                            }
-                        ],
-                        "url": {
-                            "raw": "{{baseUrl}}/audit-log?aksi=&userId=&dari=&sampai=&page=1&perPage=50",
-                            "host": ["{{baseUrl}}"],
-                            "path": ["audit-log"],
-                            "query": [
-                                {
-                                    "key": "aksi",
-                                    "value": "",
-                                    "description": "Prefix, mis. harga. / produksi. / gaji. / stok."
-                                },
-                                {
-                                    "key": "userId",
-                                    "value": "",
-                                    "description": "Filter pelaku"
-                                },
-                                {
-                                    "key": "dari",
-                                    "value": "",
-                                    "description": "YYYY-MM-DD"
-                                },
-                                {
-                                    "key": "sampai",
-                                    "value": "",
-                                    "description": "YYYY-MM-DD"
-                                },
-                                {
-                                    "key": "page",
-                                    "value": "1"
-                                },
-                                {
-                                    "key": "perPage",
-                                    "value": "50",
-                                    "description": "Maks 200"
-                                }
-                            ]
-                        },
-                        "description": "Jejak audit perubahan harga, tarif gaji, transaksi pembelian/penjualan, produksi, stok opname, dan pembayaran gaji — lengkap dengan siapa, kapan, dan dari IP mana.\n\n```json\n{ \"data\": [ {\n  \"aksi\": \"harga.ubah\",\n  \"deskripsi\": \"Harga NS 1 diubah dari Rp 14.500 menjadi Rp 15.200 per kg\",\n  \"user\": { \"id\": \"1\", \"nama\": \"Shoffal (Owner)\", \"role\": \"owner\" },\n  \"data\": { \"grade\": \"ns1\", \"harga_lama\": 14500, \"harga_baru\": 15200 },\n  \"ip\": \"127.0.0.1\", \"waktu\": \"2026-08-13T16:19:40+07:00\"\n} ],\n  \"meta\": { \"currentPage\": 1, \"lastPage\": 12, \"perPage\": 50, \"total\": 587 } }\n```"
-                    },
-                    "response": []
+                  "key": "dari",
+                  "value": "",
+                  "description": "YYYY-MM-DD"
+                },
+                {
+                  "key": "sampai",
+                  "value": "",
+                  "description": "YYYY-MM-DD"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "perPage",
+                  "value": "50",
+                  "description": "Maks 200"
                 }
               ]
             },
@@ -2385,7 +2398,7 @@
           "response": []
         },
         {
-          "name": "Export laba rugi (CSV)",
+          "name": "Export laba rugi (CSV/XLSX/PDF)",
           "request": {
             "method": "GET",
             "header": [
@@ -2427,12 +2440,12 @@
                 }
               ]
             },
-            "description": "Ringkasan laba rugi: pendapatan, rincian HPP (bahan + upah kristal/brondol + uang makan), biaya operasional, laba bersih, dan margin.\n\n---\n**Format file** — atur lewat parameter `format`: `csv` (default), `xlsx` (Excel asli, angka bisa di-SUM), atau `pdf` (berkop perusahaan).\n\nCSV:\n\nCSV siap dibuka di Excel: pemisah kolom `;`, desimal koma (`1450000,00`), diawali BOM UTF-8. Nama file otomatis memuat rentang tanggal, mis. `laba-rugi_2026-08-01_sd_2026-08-31.csv`.\n\nDi Postman klik **Save Response -> Save to a file** untuk mengunduhnya.\n\nSetiap export tercatat di audit log (`laporan.export`)."
+            "description": "`format` menerima `csv` (default), `xlsx`, atau `pdf`."
           },
           "response": []
         },
         {
-          "name": "Export biaya operasional (CSV)",
+          "name": "Export biaya operasional (CSV/XLSX/PDF)",
           "request": {
             "method": "GET",
             "header": [
@@ -2479,7 +2492,7 @@
                 }
               ]
             },
-            "description": "Rincian biaya operasional lain-lain + baris TOTAL.\n\n---\n**Format file** — atur lewat parameter `format`: `csv` (default), `xlsx` (Excel asli, angka bisa di-SUM), atau `pdf` (berkop perusahaan).\n\nCSV:\n\nCSV siap dibuka di Excel: pemisah kolom `;`, desimal koma (`1450000,00`), diawali BOM UTF-8. Nama file otomatis memuat rentang tanggal, mis. `laba-rugi_2026-08-01_sd_2026-08-31.csv`.\n\nDi Postman klik **Save Response -> Save to a file** untuk mengunduhnya.\n\nSetiap export tercatat di audit log (`laporan.export`)."
+            "description": "`format` menerima `csv` (default), `xlsx`, atau `pdf`."
           },
           "response": []
         },
@@ -2535,46 +2548,45 @@
       "name": "11. Logout (jalankan paling akhir)",
       "description": "Sengaja dipisah agar tidak mencabut token di tengah Collection Runner.",
       "item": [
-            ]
-        },
         {
-            "name": "11. Logout (jalankan paling akhir)",
-            "description": "Sengaja dipisah agar tidak mencabut token di tengah Collection Runner.",
-            "item": [
-                {
-                    "name": "Logout",
-                    "request": {
-                        "method": "POST",
-                        "header": [
-                            {
-                                "key": "Accept",
-                                "value": "application/json"
-                            }
-                        ],
-                        "url": {
-                            "raw": "{{baseUrl}}/auth/logout",
-                            "host": ["{{baseUrl}}"],
-                            "path": ["auth", "logout"]
-                        },
-                        "description": "Mencabut token yang sedang dipakai. Token lain milik user tetap aktif.\n\n> Ditempatkan paling akhir agar Runner bisa menjalankan seluruh koleksi lebih dulu. Setelah request ini dijalankan, semua request lain akan menerima **401** sampai Login diulang."
-                    },
-                    "response": [],
-                    "event": [
-                        {
-                            "listen": "test",
-                            "script": {
-                                "type": "text/javascript",
-                                "exec": [
-                                    "if (pm.response.code === 200) {",
-                                    "    pm.collectionVariables.set('token', '');",
-                                    "    console.log('Token dicabut. Jalankan Login lagi sebelum request lain.');",
-                                    "}"
-                                ]
-                            }
-                        }
-                    ]
-                }
-            ]
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/logout",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "logout"
+              ]
+            },
+            "description": "Mencabut token yang sedang dipakai. Token lain milik user tetap aktif.\n\n> Ditempatkan paling akhir agar Runner bisa menjalankan seluruh koleksi lebih dulu. Setelah request ini dijalankan, semua request lain akan menerima **401** sampai Login diulang."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    pm.collectionVariables.set('token', '');",
+                  "    console.log('Token dicabut. Jalankan Login lagi sebelum request lain.');",
+                  "}"
+                ]
+              }
+            }
+          ]
         }
-    ]
+      ]
+    }
+  ]
 }

@@ -17,6 +17,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/store/auth-store";
+import { VERSI_WEB } from "@/lib/versi";
 
 const MENU = [
   { key: "dashboard", to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -89,6 +90,10 @@ export function AppShell({ children }: { children: ReactNode }) {
         <div className="min-w-0">
           <p className="truncate font-semibold leading-tight text-sidebar-foreground">SIGULA</p>
           <p className="truncate text-[11px] text-sidebar-foreground/60">PT Nira Sari Murni</p>
+          {/* Versi bundel yang sedang jalan — memudahkan memastikan user sudah update. */}
+          <p className="truncate text-[10px] tabular-nums text-sidebar-foreground/40">
+            v{VERSI_WEB}
+          </p>
         </div>
       )}
     </div>

@@ -17,6 +17,7 @@ class PembelianRequest extends FormRequest
         return [
             'tanggal' => ['required', 'date'],
             'petaniId' => ['required', Rule::exists('petani', 'id')->whereNull('deleted_at')],
+            'pengepulId' => ['nullable', Rule::exists('pengepul', 'id')->whereNull('deleted_at')],
             'grade' => ['required', Rule::in(Grade::acceptedInputs())],
             'kg' => ['required', 'numeric', 'gt:0', 'max:9999999'],
             // Dikosongkan berarti pakai harga master yang berlaku pada tanggal transaksi.
@@ -42,6 +43,7 @@ class PembelianRequest extends FormRequest
         return [
             'tanggal' => (string) $this->input('tanggal'),
             'petani_id' => $this->input('petaniId'),
+            'pengepul_id' => $this->input('pengepulId') ?: null,
             'grade' => Grade::fromAny($this->input('grade')),
             'kilogram' => (float) $this->input('kg'),
             'harga_per_kg' => $this->filled('harga') ? (float) $this->input('harga') : null,

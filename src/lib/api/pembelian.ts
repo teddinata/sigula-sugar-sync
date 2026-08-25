@@ -19,11 +19,16 @@ export interface Pembelian {
   tanggalLabel: string;
   petaniId: string;
   namaPetani: string | null;
+  /** Kosong bila dibeli langsung dari petani tanpa perantara. */
+  pengepulId: string | null;
+  pengepul?: { id: string; nama: string } | null;
   grade: Grade;
   gradeKode: "ns1" | "ns2" | "kecap";
   kg: number;
   harga: number;
   total: number;
+  /** Nilai kg x harga sebelum dibulatkan ke kelipatan 500. */
+  totalSebelumBulat: number | null;
   statusPembayaran: "Lunas" | "Belum Lunas";
   statusPembayaranKode: "lunas" | "belum_lunas";
   catatan: string | null;
@@ -51,6 +56,9 @@ export interface PembelianListParams {
   dari?: string | undefined;
   sampai?: string | undefined;
   petaniId?: string | undefined;
+  pengepulId?: string | undefined;
+  /** true = hanya lewat pengepul, false = hanya beli langsung, undefined = semua. */
+  punyaPengepul?: boolean | undefined;
   grade?: Grade | undefined;
   q?: string | undefined;
   page?: number | undefined;
@@ -66,6 +74,7 @@ export interface PembelianListResult {
 export interface PembelianPayload {
   tanggal: string;
   petaniId: string;
+  pengepulId?: string | undefined;
   grade: Grade;
   kg: number;
   /** Kosongkan (omit/null) → backend pakai harga master yang berlaku pada `tanggal`. */
@@ -77,11 +86,13 @@ export interface PembelianKwitansi {
   nomor: string;
   tanggal: string;
   namaPetani: string | null;
+  namaPengepul?: string | null;
   nomorMember: string;
   grade: string;
   kilogram: number;
   hargaPerKg: number;
   total: number;
+  totalSebelumBulat: number | null;
   statusPembayaran: string;
 }
 
@@ -92,6 +103,8 @@ export async function getPembelianList(
     dari: params.dari,
     sampai: params.sampai,
     petaniId: params.petaniId,
+    pengepulId: params.pengepulId,
+    punyaPengepul: params.punyaPengepul === undefined ? undefined : params.punyaPengepul ? 1 : 0,
     grade: params.grade,
     q: params.q,
     page: params.page,

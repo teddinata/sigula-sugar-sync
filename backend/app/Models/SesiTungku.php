@@ -64,6 +64,17 @@ class SesiTungku extends Model
         return $this->belongsTo(Karyawan::class, 'karyawan_2_id');
     }
 
+    /**
+     * Rincian bahan mentah per grade. Satu sesi bisa memakai campuran
+     * beberapa grade; kolom `kg_bahan_mentah` adalah totalnya.
+     *
+     * @return HasMany<SesiTungkuBahan, $this>
+     */
+    public function bahan(): HasMany
+    {
+        return $this->hasMany(SesiTungkuBahan::class)->orderBy('id');
+    }
+
     /** @return HasMany<ProduksiKaryawan, $this> */
     public function porsiKaryawan(): HasMany
     {
