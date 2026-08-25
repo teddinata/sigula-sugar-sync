@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\Enums\StatusPenderes;
-use App\Enums\StatusPetani;
 use App\Exceptions\BusinessRuleException;
 use App\Models\Eksportir;
 use App\Models\Karyawan;
@@ -23,7 +22,7 @@ final class MasterDataService
     public function __construct(private readonly AuditLogger $audit) {}
 
     /**
-     * @param  array{nama: string, status: StatusPetani, nomor_member?: string|null, kontak?: string|null, alamat?: string|null}  $data
+     * @param  array{nama: string, kode_lahan?: string|null, rt_rw?: string|null, kontak?: string|null, alamat?: string|null, aktif?: bool, status_penderes?: array<int, StatusPenderes>}  $data
      */
     public function simpanPetani(array $data, ?User $user = null): Petani
     {
@@ -37,12 +36,12 @@ final class MasterDataService
         });
     }
 
-    /** @param array{nama: string, status: StatusPetani, nomor_member?: string|null, kontak?: string|null, alamat?: string|null} $data */
+    /** @param array{nama: string, kode_lahan?: string|null, rt_rw?: string|null, kontak?: string|null, alamat?: string|null, aktif?: bool, status_penderes?: array<int, StatusPenderes>} $data */
     public function ubahPetani(Petani $petani, array $data, ?User $user = null): Petani
     {
         return DB::transaction(function () use ($petani, $data, $user): Petani {
-            $sebelum = $petani->only(['nama', 'status', 'nomor_member', 'kontak', 'alamat']);
-            $petani->update($this->atributPetani($data, $petani));
+            $sebelum = $petani->only(['nama', 'kode_lahan', 'rt_rw', 'kontak', 'alamat', 'aktif']);
+            $petani->update($this->atributPetani($data));
 
             if (array_key_exists('status_penderes', $data)) {
                 $this->sinkronStatusPenderes($petani, $data['status_penderes']);
@@ -257,52 +256,26 @@ final class MasterDataService
     }
 
     /**
-     * Nomor member 3 digit berikutnya. Dipanggil di dalam transaction dan
-     * dilindungi unique index pada kolom nomor_member.
-     */
-    public function nomorMemberBerikutnya(): string
-    {
-        // Dihitung di PHP (bukan CAST di SQL) supaya portabel MySQL/PostgreSQL/SQLite.
-        $terpakai = Petani::query()
-            ->withTrashed()
-            ->whereNotNull('nomor_member')
-            ->pluck('nomor_member')
-            ->map(static fn (string $nomor): int => (int) $nomor);
-
-        $berikutnya = max(($terpakai->max() ?? 0) + 1, 201);
-
-        if ($berikutnya > 999) {
-            throw new BusinessRuleException('Nomor member 3 digit sudah habis (maksimal 999).');
-        }
-
-        return str_pad((string) $berikutnya, 3, '0', STR_PAD_LEFT);
-    }
-
-    /**
-     * @param  array{nama: string, status: StatusPetani, nomor_member?: string|null, kontak?: string|null, alamat?: string|null}  $data
+     * Kode lahan sekaligus jadi nomor member, jadi status Member/Non-Member
+     * tidak lagi disimpan — cukup disimpulkan dari terisi atau tidaknya.
+     *
+     * @param  array<string, mixed>  $data
      * @return array<string, mixed>
      */
-    private function atributPetani(array $data, ?Petani $existing = null): array
+    private function atributPetani(array $data): array
     {
-        $status = $data['status'];
-        $nomor = $data['nomor_member'] ?? null;
-
-        if ($status === StatusPetani::MEMBER) {
-            // Nomor dipertahankan bila petani sudah punya, di-generate bila kosong.
-            $nomor = filled($nomor) ? $nomor : ($existing?->nomor_member ?: $this->nomorMemberBerikutnya());
-        } else {
-            // Non-member tidak menyimpan nomor member sama sekali.
-            $nomor = null;
-        }
-
-        return [
+        $atribut = [
             'nama' => $data['nama'],
-            'status' => $status->value,
-            'nomor_member' => $nomor,
-            'kontak' => $data['kontak'] ?? null,
             'kode_lahan' => $data['kode_lahan'] ?? null,
             'rt_rw' => $data['rt_rw'] ?? null,
+            'kontak' => $data['kontak'] ?? null,
             'alamat' => $data['alamat'] ?? null,
         ];
+
+        if (array_key_exists('aktif', $data)) {
+            $atribut['aktif'] = (bool) $data['aktif'];
+        }
+
+        return $atribut;
     }
 }

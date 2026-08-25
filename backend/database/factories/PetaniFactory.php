@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Database\Factories;
 
-use App\Enums\StatusPetani;
 use App\Models\Petani;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
@@ -18,18 +17,23 @@ class PetaniFactory extends Factory
     {
         return [
             'nama' => $this->faker->name(),
-            'status' => StatusPetani::MEMBER->value,
-            'nomor_member' => (string) $this->faker->unique()->numberBetween(201, 999),
+            // Kode lahan sekaligus menandai petani sebagai member.
+            'kode_lahan' => sprintf('BA-%03d', $this->faker->unique()->numberBetween(1, 999)),
+            'rt_rw' => sprintf('%02d/%02d', $this->faker->numberBetween(1, 7), $this->faker->numberBetween(1, 3)),
+            'aktif' => true,
             'kontak' => '08'.$this->faker->numerify('##-####-####'),
             'alamat' => $this->faker->address(),
         ];
     }
 
+    /** Tanpa kode lahan = Non-Member. */
     public function nonMember(): static
     {
-        return $this->state(fn (): array => [
-            'status' => StatusPetani::NON_MEMBER->value,
-            'nomor_member' => null,
-        ]);
+        return $this->state(fn (): array => ['kode_lahan' => null]);
+    }
+
+    public function nonaktif(): static
+    {
+        return $this->state(fn (): array => ['aktif' => false]);
     }
 }

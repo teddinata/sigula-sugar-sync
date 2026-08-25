@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { Loader2, Pencil, Plus, Trash2 } from "lucide-react";
+import { Columns3, Loader2, Pencil, Plus, PowerOff, RotateCcw, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -38,6 +38,15 @@ import {
   type StatusPenderesKode,
 } from "@/lib/api/petani";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Switch } from "@/components/ui/switch";
 import { useHapusPetani, usePetaniList, useTambahPetani, useUbahPetani } from "@/hooks/use-petani";
 
 export const Route = createFileRoute("/_app/petani")({
@@ -61,24 +70,59 @@ export const Route = createFileRoute("/_app/petani")({
 
 interface FormState {
   nama: string;
-  status: "Member" | "Non-Member";
+  /** Kode lahan sekaligus nomor member: terisi = Member. */
+  kodeLahan: string;
+  rtRw: string;
+  aktif: boolean;
   kontak: string;
   alamat: string;
   /** Satu petani bisa punya lebih dari satu status, mis. PMS + PLMD. */
   statusPenderes: StatusPenderesKode[];
-  kodeLahan: string;
-  rtRw: string;
 }
 
 const emptyForm: FormState = {
   nama: "",
-  status: "Member",
+  kodeLahan: "",
+  rtRw: "",
+  aktif: true,
   kontak: "",
   alamat: "",
   statusPenderes: [],
-  kodeLahan: "",
-  rtRw: "",
 };
+
+/**
+ * Kolom yang bisa disembunyikan. Alamat, Kontak, dan Status Member dimatikan
+ * secara default karena data client tidak mengisinya — Status bisa disimpulkan
+ * dari ada tidaknya kode lahan.
+ */
+const KOLOM_OPSIONAL = {
+  status: "Status Member",
+  kontak: "Kontak",
+  alamat: "Alamat",
+  trx: "Total Transaksi",
+} as const;
+
+type KolomOpsional = keyof typeof KOLOM_OPSIONAL;
+
+const KOLOM_DEFAULT: Record<KolomOpsional, boolean> = {
+  status: false,
+  kontak: false,
+  alamat: false,
+  trx: true,
+};
+
+const KUNCI_KOLOM = "sigula.petani.kolom";
+
+function bacaPilihanKolom(): Record<KolomOpsional, boolean> {
+  if (typeof window === "undefined") return KOLOM_DEFAULT;
+
+  try {
+    const mentah = window.localStorage.getItem(KUNCI_KOLOM);
+    return mentah ? { ...KOLOM_DEFAULT, ...JSON.parse(mentah) } : KOLOM_DEFAULT;
+  } catch {
+    return KOLOM_DEFAULT;
+  }
+}
 
 function apiErrorMessage(err: unknown, fallback: string): string {
   return err instanceof ApiError ? (err.firstFieldError ?? err.message) : fallback;
@@ -103,6 +147,17 @@ function PetaniPage() {
 
   // Filter status penderes: kosong = tampilkan semua.
   const [fStatusPenderes, setFStatusPenderes] = useState<StatusPenderesKode[]>([]);
+  const [sertakanNonaktif, setSertakanNonaktif] = useState(false);
+  const [kolom, setKolom] = useState<Record<KolomOpsional, boolean>>(bacaPilihanKolom);
+
+  // Pilihan kolom disimpan per browser supaya tidak perlu diatur ulang tiap buka.
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(KUNCI_KOLOM, JSON.stringify(kolom));
+    } catch {
+      // Mode privat / storage penuh — cukup abaikan.
+    }
+  }, [kolom]);
 
   const {
     data: rows = [],
@@ -111,6 +166,7 @@ function PetaniPage() {
   } = usePetaniList({
     q: qDebounced || undefined,
     statusPenderes: fStatusPenderes.length > 0 ? fStatusPenderes : undefined,
+    sertakanNonaktif,
   });
   const tambahPetani = useTambahPetani();
   const ubahPetani = useUbahPetani();
@@ -132,12 +188,12 @@ function PetaniPage() {
     setEditing(p);
     setForm({
       nama: p.nama,
-      status: p.status,
+      kodeLahan: p.kodeLahan ?? "",
+      rtRw: p.rtRw ?? "",
+      aktif: p.aktif,
       kontak: p.kontak,
       alamat: p.alamat,
       statusPenderes: (p.statusPenderes ?? []).map((s) => s.kode),
-      kodeLahan: p.kodeLahan ?? "",
-      rtRw: p.rtRw ?? "",
     });
     setErr(null);
     setOpen(true);
@@ -147,13 +203,13 @@ function PetaniPage() {
     if (!form.nama.trim()) return setErr("Nama petani wajib diisi.");
     const payload: PetaniPayload = {
       nama: form.nama.trim(),
-      status: form.status,
+      kodeLahan: form.kodeLahan.trim() || undefined,
+      rtRw: form.rtRw.trim() || undefined,
+      aktif: form.aktif,
       kontak: form.kontak.trim() || undefined,
       alamat: form.alamat.trim() || undefined,
       // Selalu dikirim (walau kosong) supaya status yang dilepas ikut terhapus.
       statusPenderes: form.statusPenderes,
-      kodeLahan: form.kodeLahan.trim() || undefined,
-      rtRw: form.rtRw.trim() || undefined,
     };
     try {
       if (editing) {
@@ -182,6 +238,24 @@ function PetaniPage() {
 
   const saving = tambahPetani.isPending || ubahPetani.isPending;
 
+  /**
+   * Petani yang berhenti menderes cukup dinonaktifkan — menghapusnya akan ikut
+   * membawa riwayat pembelian yang sudah tercatat atas namanya.
+   */
+  const toggleAktif = async (p: Petani) => {
+    try {
+      await ubahPetani.mutateAsync({
+        id: p.id,
+        payload: { nama: p.nama, aktif: !p.aktif },
+      });
+      toast.success(p.aktif ? "Petani dinonaktifkan" : "Petani diaktifkan kembali", {
+        description: p.nama,
+      });
+    } catch (e) {
+      toast.error(apiErrorMessage(e, "Gagal mengubah status aktif petani."));
+    }
+  };
+
   const toggleStatusForm = (kode: StatusPenderesKode) =>
     setForm((f) => ({
       ...f,
@@ -195,29 +269,39 @@ function PetaniPage() {
       daftar.includes(kode) ? daftar.filter((k) => k !== kode) : [...daftar, kode],
     );
 
-  const cols: Column<Petani>[] = [
+  const semuaKolom: Column<Petani>[] = [
     {
       key: "nama",
       header: "Nama",
       sortValue: (r) => r.nama,
-      cell: (r) => <span className="font-medium">{r.nama}</span>,
+      cell: (r) => (
+        <div>
+          <span className="font-medium">{r.nama}</span>
+          {!r.aktif && (
+            <Badge variant="secondary" className="ml-2 align-middle text-[10px]">
+              Nonaktif
+            </Badge>
+          )}
+        </div>
+      ),
     },
     {
-      key: "status",
-      header: "Status",
-      sortValue: (r) => r.status,
+      // Kode lahan sekaligus nomor member — satu kolom, bukan dua.
+      key: "lahan",
+      header: "Kode Lahan / No. Member",
+      sortValue: (r) => r.kodeLahan ?? "",
       cell: (r) =>
-        r.status === "Member" ? (
-          <Badge className="bg-success/15 text-success hover:bg-success/15">Member</Badge>
+        r.kodeLahan ? (
+          <span className="font-mono text-xs">{r.kodeLahan}</span>
         ) : (
-          <Badge variant="secondary">Non-Member</Badge>
+          <span className="text-muted-foreground">—</span>
         ),
     },
     {
-      key: "nomor",
-      header: "Nomor Member",
-      cell: (r) =>
-        r.labelMember ? r.labelMember : <span className="text-muted-foreground">—</span>,
+      key: "rtrw",
+      header: "RT/RW",
+      sortValue: (r) => r.rtRw ?? "",
+      cell: (r) => r.rtRw ?? <span className="text-muted-foreground">—</span>,
     },
     {
       key: "penderes",
@@ -236,14 +320,15 @@ function PetaniPage() {
         ),
     },
     {
-      key: "lahan",
-      header: "Kode Lahan",
-      cell: (r) => (
-        <div className="text-xs">
-          <p>{r.kodeLahan || "—"}</p>
-          {r.rtRw && <p className="text-muted-foreground">RT/RW {r.rtRw}</p>}
-        </div>
-      ),
+      key: "status",
+      header: "Status Member",
+      sortValue: (r) => r.status,
+      cell: (r) =>
+        r.status === "Member" ? (
+          <Badge className="bg-success/15 text-success hover:bg-success/15">Member</Badge>
+        ) : (
+          <Badge variant="secondary">Non-Member</Badge>
+        ),
     },
     { key: "kontak", header: "Kontak", cell: (r) => r.kontak || "-" },
     {
@@ -272,6 +357,15 @@ function PetaniPage() {
           <Button variant="ghost" size="icon" aria-label="Ubah" onClick={() => openEdit(r)}>
             <Pencil className="size-4" />
           </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label={r.aktif ? "Nonaktifkan" : "Aktifkan kembali"}
+            title={r.aktif ? "Nonaktifkan" : "Aktifkan kembali"}
+            onClick={() => toggleAktif(r)}
+          >
+            {r.aktif ? <PowerOff className="size-4" /> : <RotateCcw className="size-4" />}
+          </Button>
           <Button variant="ghost" size="icon" aria-label="Hapus" onClick={() => hapus(r)}>
             <Trash2 className="size-4 text-destructive" />
           </Button>
@@ -280,11 +374,20 @@ function PetaniPage() {
     },
   ];
 
+  // Kolom opsional disaring sesuai pilihan pengguna; sisanya selalu tampil.
+  const cols = semuaKolom.filter(
+    (c) => !(c.key in KOLOM_OPSIONAL) || kolom[c.key as KolomOpsional],
+  );
+
   return (
     <>
       <PageHeader
         title="Data Petani"
-        subtitle={isLoading ? "Memuat…" : `${rows.length} petani mitra terdaftar`}
+        subtitle={
+          isLoading
+            ? "Memuat…"
+            : `${rows.length} petani${sertakanNonaktif ? " (termasuk nonaktif)" : " aktif"}`
+        }
         action={
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
@@ -308,49 +411,18 @@ function PetaniPage() {
                 </div>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="space-y-2">
-                    <Label>Status</Label>
-                    <Select
-                      value={form.status}
-                      onValueChange={(v: "Member" | "Non-Member") =>
-                        setForm({ ...form, status: v })
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Member">Member</SelectItem>
-                        <SelectItem value="Non-Member">Non-Member</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  {form.status === "Member" && (
-                    <div className="space-y-2">
-                      <Label>Nomor Member</Label>
-                      <div className="flex h-9 items-center rounded-md border bg-muted px-3 text-sm text-muted-foreground">
-                        {editing?.labelMember || "Dibuat otomatis saat disimpan"}
-                      </div>
-                    </div>
-                  )}
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="kontak">Kontak</Label>
-                  <Input
-                    id="kontak"
-                    value={form.kontak}
-                    onChange={(e) => setForm({ ...form, kontak: e.target.value })}
-                    placeholder="0812-3456-7890"
-                  />
-                </div>
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label htmlFor="kodeLahan">Kode Lahan</Label>
+                    <Label htmlFor="kodeLahan">Kode Lahan / No. Member</Label>
                     <Input
                       id="kodeLahan"
                       value={form.kodeLahan}
                       onChange={(e) => setForm({ ...form, kodeLahan: e.target.value })}
-                      placeholder="Contoh: BTN-014"
+                      placeholder="Contoh: BA-002"
                     />
+                    <p className="text-xs text-muted-foreground">
+                      {form.kodeLahan.trim()
+                        ? "Terisi → petani terdaftar sebagai Member."
+                        : "Kosongkan bila petani belum jadi member."}
+                    </p>
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="rtRw">RT/RW</Label>
@@ -361,6 +433,30 @@ function PetaniPage() {
                       placeholder="02/05"
                     />
                   </div>
+                </div>
+                <div className="flex items-center justify-between rounded-lg border p-3">
+                  <div>
+                    <Label htmlFor="aktif" className="cursor-pointer">
+                      Petani aktif
+                    </Label>
+                    <p className="text-xs text-muted-foreground">
+                      Matikan bila sudah berhenti menderes — riwayat transaksinya tetap tersimpan.
+                    </p>
+                  </div>
+                  <Switch
+                    id="aktif"
+                    checked={form.aktif}
+                    onCheckedChange={(v) => setForm({ ...form, aktif: v })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="kontak">Kontak (opsional)</Label>
+                  <Input
+                    id="kontak"
+                    value={form.kontak}
+                    onChange={(e) => setForm({ ...form, kontak: e.target.value })}
+                    placeholder="0812-3456-7890"
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="alamat">Alamat</Label>
@@ -423,6 +519,50 @@ function PetaniPage() {
               onChange={setQ}
               placeholder="Cari nama, nomor member, atau kontak..."
             />
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Switch
+                  id="nonaktif-petani"
+                  checked={sertakanNonaktif}
+                  onCheckedChange={setSertakanNonaktif}
+                />
+                <Label htmlFor="nonaktif-petani" className="cursor-pointer font-normal">
+                  Tampilkan nonaktif
+                </Label>
+              </div>
+
+              {/* Kolom bisa disembunyikan supaya tabel tetap terbaca di layar sempit. */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" className="h-8">
+                    <Columns3 className="mr-2 size-4" /> Kolom
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="w-52">
+                  <DropdownMenuLabel>Tampilkan kolom</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  {(Object.keys(KOLOM_OPSIONAL) as KolomOpsional[]).map((k) => (
+                    <DropdownMenuCheckboxItem
+                      key={k}
+                      checked={kolom[k]}
+                      onCheckedChange={(v) => setKolom((c) => ({ ...c, [k]: Boolean(v) }))}
+                      onSelect={(e) => e.preventDefault()}
+                    >
+                      {KOLOM_OPSIONAL[k]}
+                    </DropdownMenuCheckboxItem>
+                  ))}
+                  <DropdownMenuSeparator />
+                  <button
+                    type="button"
+                    onClick={() => setKolom(KOLOM_DEFAULT)}
+                    className="w-full rounded-sm px-2 py-1.5 text-left text-sm hover:bg-accent"
+                  >
+                    Kembalikan ke bawaan
+                  </button>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+
             <div className="flex flex-wrap items-center gap-1.5">
               <span className="mr-1 text-xs text-muted-foreground">Status penderes:</span>
               {DAFTAR_STATUS_PENDERES.map((s) => {

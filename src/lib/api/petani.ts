@@ -31,18 +31,21 @@ export const DAFTAR_STATUS_PENDERES: StatusPenderes[] = [
 export interface Petani {
   id: string;
   nama: string;
+  /** Disimpulkan dari kode lahan, bukan kolom tersendiri. */
   status: "Member" | "Non-Member";
   statusKode: "member" | "non_member";
-  /** Kosong untuk Non-Member. Digenerate backend, jangan dikirim dari form. */
+  /** Kode lahan (mis. "BA-002") sekaligus berfungsi sebagai nomor member. */
+  kodeLahan: string | null;
+  /** Alias kodeLahan — dipertahankan supaya kode lama tetap jalan. */
   nomorMember: string;
-  /** "Petani {nomorMember}", kosong untuk Non-Member. */
   labelMember: string;
+  rtRw: string | null;
+  /** Petani yang berhenti menderes dinonaktifkan, bukan dihapus. */
+  aktif: boolean;
   kontak: string;
   alamat: string;
   /** Bisa lebih dari satu, mis. PMS + PLMD. */
   statusPenderes?: StatusPenderes[];
-  kodeLahan: string | null;
-  rtRw: string | null;
   totalTransaksi: number;
   totalNilai: number;
 }
@@ -51,22 +54,26 @@ export interface PetaniListParams {
   q?: string | undefined;
   /** Filter multi-status; dikirim sebagai daftar dipisah koma. */
   statusPenderes?: StatusPenderesKode[] | undefined;
+  /** Default hanya menampilkan petani aktif. */
+  sertakanNonaktif?: boolean | undefined;
 }
 
 export interface PetaniPayload {
   nama: string;
-  status: "Member" | "Non-Member";
+  /** Terisi = Member, kosong = Non-Member. Tidak ada nomor member terpisah. */
+  kodeLahan?: string | undefined;
+  rtRw?: string | undefined;
+  aktif?: boolean | undefined;
   kontak?: string | undefined;
   alamat?: string | undefined;
   statusPenderes?: StatusPenderesKode[] | undefined;
-  kodeLahan?: string | undefined;
-  rtRw?: string | undefined;
 }
 
 export async function getPetaniList(params: PetaniListParams = {}): Promise<Petani[]> {
   const res = await apiClient.get<{ data: Petani[] }>("petani", {
     q: params.q,
     statusPenderes: params.statusPenderes?.length ? params.statusPenderes.join(",") : undefined,
+    sertakanNonaktif: params.sertakanNonaktif ? 1 : undefined,
   });
   return res.data;
 }

@@ -86,7 +86,8 @@ class PembelianController extends Controller
             'tanggal' => Periode::tanggalIndonesia($pembelian->tanggal),
             'namaPetani' => $pembelian->petani?->nama,
             'namaPengepul' => $pembelian->pengepul?->nama,
-            'nomorMember' => $pembelian->petani?->nomor_member ? 'Petani '.$pembelian->petani->nomor_member : '-',
+            // Kode lahan sekaligus nomor member petani.
+            'nomorMember' => $pembelian->petani?->kode_lahan ?: '-',
             'grade' => $pembelian->grade->label(),
             'kilogram' => (float) $pembelian->kilogram,
             'hargaPerKg' => (float) $pembelian->harga_per_kg,

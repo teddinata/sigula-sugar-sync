@@ -6,7 +6,6 @@ namespace Database\Seeders;
 
 use App\Enums\Grade;
 use App\Enums\JenisTarif;
-use App\Enums\StatusPetani;
 use App\Models\Eksportir;
 use App\Models\GradeHarga;
 use App\Models\Karyawan;
@@ -115,14 +114,16 @@ class MasterSeeder extends Seeder
         }
 
         foreach (self::NAMA_PETANI as $i => $nama) {
+            // Petani contoh: sebagian tanpa kode lahan supaya kasus Non-Member ikut terwakili.
             $member = $i % 3 !== 2;
 
             Petani::create([
                 'nama' => $nama,
-                'status' => $member ? StatusPetani::MEMBER->value : StatusPetani::NON_MEMBER->value,
-                'nomor_member' => $member ? (string) (200 + $i * 3 + 11) : null,
+                'kode_lahan' => $member ? sprintf('DEV-%03d', $i + 1) : null,
+                'rt_rw' => sprintf('%02d/%02d', ($i % 7) + 1, ($i % 3) + 1),
                 'kontak' => sprintf('08%d-%d-%d', mt_rand(11, 89), mt_rand(1000, 9999), mt_rand(1000, 9999)),
                 'alamat' => self::ALAMAT[$i % count(self::ALAMAT)],
+                'aktif' => true,
             ]);
         }
     }

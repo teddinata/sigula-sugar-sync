@@ -53,6 +53,7 @@ import {
 } from "@/hooks/use-produksi";
 import { useKaryawanList, useTambahKaryawan } from "@/hooks/use-master-data";
 import { useStokPosisi } from "@/hooks/use-stok";
+import { ExportButton } from "@/components/sigula/export-button";
 
 export const Route = createFileRoute("/_app/produksi")({
   head: () => ({
@@ -483,9 +484,19 @@ function ProduksiPage() {
         title="Produksi (Sesi Tungku)"
         subtitle="Setiap tungku dikerjakan tepat 2 karyawan; kristal & brondol keluar dari proses masak yang sama"
         action={
-          <Button onClick={bukaMulai}>
-            <Plus className="mr-2 size-4" /> Mulai Sesi Tungku Baru
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <ExportButton
+              jenis="produksi"
+              params={{
+                dari: fTanggal || undefined,
+                sampai: fTanggal || undefined,
+                status: fStatus === "semua" ? undefined : fStatus,
+              }}
+            />
+            <Button onClick={bukaMulai}>
+              <Plus className="mr-2 size-4" /> Mulai Sesi Tungku Baru
+            </Button>
+          </div>
         }
       />
 

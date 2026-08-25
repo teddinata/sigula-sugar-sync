@@ -29,6 +29,7 @@ import { todayISO } from "@/lib/sigula-seed";
 import { ApiError } from "@/lib/api-client";
 import type { BarisGaji } from "@/lib/api/penggajian";
 import { useBayarGaji, useBayarSemuaGaji, useRekapGaji, useSlipGaji } from "@/hooks/use-penggajian";
+import { ExportButton } from "@/components/sigula/export-button";
 
 export const Route = createFileRoute("/_app/penggajian")({
   head: () => ({
@@ -222,12 +223,16 @@ function PenggajianPage() {
         title="Penggajian Karyawan"
         subtitle="Periode Senin s.d. Jumat, dibayarkan setiap hari Jumat"
         action={
-          <Button
-            onClick={() => setKonfirmasiBayarSemua(true)}
-            disabled={!rekap || rekap.ringkasan.belumDibayar <= 0}
-          >
-            <Wallet className="mr-2 size-4" /> Bayar Semua
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            {/* Rekap gaji selalu per periode Senin-Jumat yang sedang dibuka. */}
+            <ExportButton jenis="penggajian" label="Export Rekap" params={{ tanggal: senin }} />
+            <Button
+              onClick={() => setKonfirmasiBayarSemua(true)}
+              disabled={!rekap || rekap.ringkasan.belumDibayar <= 0}
+            >
+              <Wallet className="mr-2 size-4" /> Bayar Semua
+            </Button>
+          </div>
         }
       />
 

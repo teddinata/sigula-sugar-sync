@@ -18,13 +18,17 @@ class PetaniResource extends JsonResource
         return [
             'id' => (string) $this->id,
             'nama' => $this->nama,
-            'status' => $this->status->label(),
-            'statusKode' => $this->status->value,
-            'nomorMember' => $this->nomor_member ?? '',
-            'labelMember' => $this->nomor_member ? 'Petani '.$this->nomor_member : '',
-            'kontak' => $this->kontak ?? '',
+            // Status disimpulkan dari kode lahan, bukan kolom tersendiri.
+            'status' => $this->status()->label(),
+            'statusKode' => $this->status()->value,
+            // Kode lahan = nomor member; dua nama ini menunjuk nilai yang sama
+            // supaya klien lama yang membaca nomorMember tetap jalan.
             'kodeLahan' => $this->kode_lahan,
+            'nomorMember' => $this->kode_lahan ?? '',
+            'labelMember' => $this->kode_lahan ?? '',
             'rtRw' => $this->rt_rw,
+            'aktif' => (bool) $this->aktif,
+            'kontak' => $this->kontak ?? '',
             // Bisa lebih dari satu status, mis. [PMS, PLMD].
             'statusPenderes' => $this->whenLoaded('statusPenderes', fn (): array => array_map(
                 static fn (StatusPenderes $s): array => [

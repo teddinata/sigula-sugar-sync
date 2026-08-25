@@ -47,6 +47,7 @@ import {
 } from "@/hooks/use-penjualan";
 import { useEksportirList } from "@/hooks/use-master-data";
 import { useStokPosisi } from "@/hooks/use-stok";
+import { ExportButton } from "@/components/sigula/export-button";
 
 export const Route = createFileRoute("/_app/penjualan")({
   head: () => ({
@@ -450,9 +451,19 @@ function PenjualanPage() {
         title="Penjualan ke Eksportir"
         subtitle="Satu invoice dapat memuat baris gula kristal dan gula brondol dengan harga berbeda"
         action={
-          <Button onClick={buka}>
-            <Plus className="mr-2 size-4" /> Transaksi Penjualan Baru
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <ExportButton
+              jenis="penjualan"
+              params={{
+                dari: dari || undefined,
+                sampai: sampai || undefined,
+                eksportirId: fEksportirId === "semua" ? undefined : fEksportirId,
+              }}
+            />
+            <Button onClick={buka}>
+              <Plus className="mr-2 size-4" /> Transaksi Penjualan Baru
+            </Button>
+          </div>
         }
       />
 

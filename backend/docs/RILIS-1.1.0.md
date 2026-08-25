@@ -309,6 +309,31 @@ Pastikan `SIGULA_SEED_DEMO=false` ada di `.env` server, kalau tidak transaksi de
 
 ---
 
+## Bagian D3 — Ganti password akun
+
+Setelah `migrate:fresh --seed`, ketiga akun kembali ke `SIGULA_DEFAULT_PASSWORD`.
+Gantilah dengan password sungguhan — diketik interaktif, jadi tidak tersimpan di
+shell history maupun terlihat di daftar proses:
+
+```bash
+cd /var/www/api.nirasarimurni.com/backend
+php artisan sigula:ganti-password owner@nirasarimurni.com
+```
+
+Untuk ketiga akun sekaligus:
+
+```bash
+php artisan sigula:ganti-password --semua
+```
+
+Perintah ini sekaligus mencabut seluruh token Sanctum akun tersebut, sehingga sesi
+yang masih terbuka di browser lain ikut logout.
+
+Setelah selesai, kosongkan juga `SIGULA_DEFAULT_PASSWORD` dari `.env` supaya password
+awal tidak tertinggal di server, lalu `php artisan optimize`.
+
+---
+
 ## Bagian E — Env opsional
 
 Semua punya nilai default, jadi tidak wajib diisi. Tambahkan ke

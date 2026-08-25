@@ -119,9 +119,65 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
   return payload as T;
 }
 
+/**
+ * Mengunduh file dari endpoint export.
+ *
+ * Tidak lewat request() biasa karena responsnya bukan JSON melainkan file
+ * (CSV/XLSX/PDF), dan token Sanctum harus tetap dilampirkan — jadi tidak bisa
+ * sekadar mengarahkan browser ke URL-nya.
+ */
+async function unduh(path: string, query?: RequestOptions["query"]): Promise<void> {
+  const headers: Record<string, string> = {};
+  const token = getToken();
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+
+  const response = await fetch(buildUrl(path, query), { method: "GET", headers });
+
+  if (!response.ok) {
+    if (response.status === 401) {
+      clearToken();
+      unauthorizedHandler?.();
+    }
+
+    // Endpoint export tetap mengirim error dalam bentuk JSON.
+    const payload = await response.json().catch(() => null);
+    throw new ApiError(
+      payload?.message ?? `Gagal mengunduh laporan (${response.status}).`,
+      response.status,
+      payload?.errors ?? null,
+    );
+  }
+
+  const blob = await response.blob();
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+
+  link.href = url;
+  link.download = namaFileDariHeader(response) ?? "laporan";
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+
+  // Ditunda sebentar: Safari membatalkan unduhan bila URL langsung dicabut.
+  window.setTimeout(() => URL.revokeObjectURL(url), 10_000);
+}
+
+/** Mengambil nama file dari header Content-Disposition yang dikirim backend. */
+function namaFileDariHeader(response: Response): string | null {
+  const disposition = response.headers.get("content-disposition");
+  if (!disposition) return null;
+
+  const utf8 = /filename\*=UTF-8''([^;]+)/i.exec(disposition);
+  if (utf8?.[1]) return decodeURIComponent(utf8[1]);
+
+  const biasa = /filename="?([^";]+)"?/i.exec(disposition);
+  return biasa?.[1] ?? null;
+}
+
 export const apiClient = {
   get: <T>(path: string, query?: RequestOptions["query"]) =>
     request<T>(path, { method: "GET", query }),
+  unduh,
   post: <T>(path: string, body?: unknown, options: Omit<RequestOptions, "method" | "body"> = {}) =>
     request<T>(path, { ...options, method: "POST", body }),
   put: <T>(path: string, body?: unknown) => request<T>(path, { method: "PUT", body }),

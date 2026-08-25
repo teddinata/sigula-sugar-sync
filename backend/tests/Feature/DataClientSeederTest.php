@@ -81,4 +81,30 @@ class DataClientSeederTest extends TestCase
         $this->assertSame(0, Petani::query()->whereNull('kode_lahan')->count());
         $this->assertSame(0, Petani::query()->doesntHave('statusPenderes')->count());
     }
+
+    /** Kode lahan = nomor member, jadi seluruh petani CSV berstatus Member. */
+    public function test_seluruh_petani_csv_berstatus_member(): void
+    {
+        $this->seed(DataClientSeeder::class);
+
+        $petani = Petani::query()->where('kode_lahan', 'BA-002')->firstOrFail();
+
+        $this->assertTrue($petani->isMember());
+        $this->assertSame('BA-002', $petani->kode_lahan);
+    }
+
+    /** DASIRIN ditandai merah di dokumen client: dinonaktifkan, bukan dihapus. */
+    public function test_dasirin_masuk_sebagai_petani_nonaktif(): void
+    {
+        $this->seed(DataClientSeeder::class);
+
+        $dasirin = Petani::query()->where('kode_lahan', 'BA-015')->firstOrFail();
+
+        $this->assertSame('DASIRIN', $dasirin->nama);
+        $this->assertFalse($dasirin->aktif);
+
+        // Tetap 195 baris; yang nonaktif hanya disembunyikan dari daftar default.
+        $this->assertSame(195, Petani::query()->count());
+        $this->assertSame(194, Petani::query()->aktif()->count());
+    }
 }

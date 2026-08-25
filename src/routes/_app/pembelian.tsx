@@ -41,6 +41,7 @@ import { useBatalkanPembelian, usePembelianList, useTambahPembelian } from "@/ho
 import { useHargaBeli } from "@/hooks/use-master-data";
 import { usePetaniList } from "@/hooks/use-petani";
 import { usePengepulList } from "@/hooks/use-pengepul";
+import { ExportButton } from "@/components/sigula/export-button";
 
 export const Route = createFileRoute("/_app/pembelian")({
   head: () => ({
@@ -114,7 +115,7 @@ function PetaniPicker({
           {petaniList.map((p) => (
             <SelectItem key={p.id} value={p.id}>
               {p.nama}
-              {p.labelMember ? ` — ${p.labelMember}` : " — Non-Member"}
+              {p.kodeLahan ? ` — ${p.kodeLahan}` : " — Non-Member"}
             </SelectItem>
           ))}
         </SelectContent>
@@ -420,9 +421,20 @@ function PembelianPage() {
         title="Pembelian Bahan dari Petani"
         subtitle="Pencatatan pembelian bahan mentah per grade"
         action={
-          <Button onClick={buka}>
-            <Plus className="mr-2 size-4" /> Transaksi Baru
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <ExportButton
+              jenis="pembelian"
+              params={{
+                dari: dari || undefined,
+                sampai: sampai || undefined,
+                grade: fGrade === "semua" ? undefined : fGrade,
+                petaniId: fPetaniId === "semua" ? undefined : fPetaniId,
+              }}
+            />
+            <Button onClick={buka}>
+              <Plus className="mr-2 size-4" /> Transaksi Baru
+            </Button>
+          </div>
         }
       />
 
@@ -755,7 +767,7 @@ function PembelianPage() {
               <BarisThermal label="No" value={struk.nomor} />
               <BarisThermal label="Tgl" value={struk.tanggal} />
               <BarisThermal label="Petani" value={struk.namaPetani ?? "-"} />
-              <BarisThermal label="Member" value={struk.nomorMember} />
+              <BarisThermal label="Kode Lahan" value={struk.nomorMember} />
               {struk.namaPengepul && <BarisThermal label="Pengepul" value={struk.namaPengepul} />}
               <GarisThermal />
               <BarisThermal label="Grade" value={struk.grade} />
@@ -780,7 +792,7 @@ function PembelianPage() {
             <PrintRow label="Tanggal" value={struk.tanggal} />
             <PrintRow label="Diterima dari" value="PT Nira Sari Murni" />
             <PrintRow label="Dibayarkan kepada" value={struk.namaPetani ?? "-"} />
-            <PrintRow label="Nomor Member" value={struk.nomorMember} />
+            <PrintRow label="Kode Lahan / No. Member" value={struk.nomorMember} />
             {struk.namaPengepul && <PrintRow label="Melalui pengepul" value={struk.namaPengepul} />}
             <PrintRow label="Grade bahan" value={struk.grade} />
             <PrintRow label="Kilogram" value={`${angka(struk.kilogram)} kg`} />

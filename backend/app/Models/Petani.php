@@ -22,18 +22,26 @@ class Petani extends Model
 
     protected $fillable = [
         'nama',
-        'status',
-        'nomor_member',
         'kode_lahan',
         'rt_rw',
         'kontak',
         'alamat',
+        'aktif',
+    ];
+
+    /**
+     * Default kolom `aktif` ikut ditegaskan di sini: nilai default database
+     * tidak terbawa ke instance hasil create(), sehingga tanpa ini response
+     * pembuatan petani baru mengirim aktif=false.
+     */
+    protected $attributes = [
+        'aktif' => true,
     ];
 
     protected function casts(): array
     {
         return [
-            'status' => StatusPetani::class,
+            'aktif' => 'boolean',
         ];
     }
 
@@ -73,7 +81,7 @@ class Petani extends Model
 
         return $query->where(function (Builder $q) use ($term): void {
             $q->where('nama', 'like', '%'.$term.'%')
-                ->orWhere('nomor_member', 'like', '%'.$term.'%')
+                ->orWhere('kode_lahan', 'like', '%'.$term.'%')
                 ->orWhere('kontak', 'like', '%'.$term.'%');
         });
     }
@@ -86,8 +94,22 @@ class Petani extends Model
             : $query->whereHas('statusPenderes', fn (Builder $q) => $q->whereIn('kode', $kode));
     }
 
+    /**
+     * Kode lahan (mis. "BA-002") sekaligus berfungsi sebagai nomor member —
+     * begitu aturan client — jadi statusnya disimpulkan, bukan disimpan.
+     */
     public function isMember(): bool
     {
-        return $this->status === StatusPetani::MEMBER;
+        return filled($this->kode_lahan);
+    }
+
+    public function status(): StatusPetani
+    {
+        return $this->isMember() ? StatusPetani::MEMBER : StatusPetani::NON_MEMBER;
+    }
+
+    public function scopeAktif(Builder $query): Builder
+    {
+        return $query->where('aktif', true);
     }
 }

@@ -91,7 +91,7 @@ final class LaporanExportService
                     $p->tanggal->toDateString(),
                     $p->nomor_kwitansi,
                     $p->petani?->nama ?? '-',
-                    $p->petani?->nomor_member ? 'Petani '.$p->petani->nomor_member : '-',
+                    $p->petani?->kode_lahan ?: '-',
                     $p->grade->label(),
                     CsvExport::angka($p->kilogram),
                     CsvExport::angka($p->harga_per_kg),

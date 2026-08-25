@@ -23,6 +23,9 @@ class PetaniController extends Controller
         $petani = Petani::query()
             ->cari($request->string('q')->trim()->value())
             ->berstatusPenderes($this->filterStatus($request))
+            // Petani yang berhenti menderes dinonaktifkan, bukan dihapus, supaya
+            // riwayat transaksinya tetap utuh — jadi disembunyikan secara default.
+            ->when(! $request->boolean('sertakanNonaktif'), fn ($q) => $q->aktif())
             ->with('statusPenderes')
             ->withCount('pembelian')
             ->withSum('pembelian', 'total')

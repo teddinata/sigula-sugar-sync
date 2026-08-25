@@ -12,7 +12,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { Download, Loader2, Pencil, Plus, Trash2 } from "lucide-react";
+import { Loader2, Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -56,6 +56,8 @@ import {
 } from "@/hooks/use-keuangan";
 import type { AuditLogEntry } from "@/lib/api/audit-log";
 import { useAuditLog } from "@/hooks/use-audit-log";
+import { ExportButton } from "@/components/sigula/export-button";
+import { RingkasanAiCard } from "@/components/sigula/ringkasan-ai-card";
 
 export const Route = createFileRoute("/_app/keuangan")({
   head: () => ({
@@ -313,12 +315,22 @@ function KeuanganPage() {
         title="Keuangan & Laporan Laba Rugi"
         subtitle={`Periode ${tanggalPendek(rangeDari)} — ${tanggalPendek(rangeSampai)}`}
         action={
-          <Button
-            variant="outline"
-            onClick={() => toast.info("Fitur ekspor laporan belum tersedia")}
-          >
-            <Download className="mr-2 size-4" /> Export Laporan
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <ExportButton
+              jenis="laba-rugi"
+              label="Export Laba Rugi"
+              params={{ dari: rangeDari, sampai: rangeSampai }}
+            />
+            <ExportButton
+              jenis="biaya"
+              label="Export Biaya"
+              params={{
+                dari: rangeDari,
+                sampai: rangeSampai,
+                kategori: fKategori === "semua" ? undefined : fKategori,
+              }}
+            />
+          </div>
         }
       />
 
@@ -329,6 +341,7 @@ function KeuanganPage() {
         </TabsList>
 
         <TabsContent value="laba-rugi" className="space-y-6">
+          <RingkasanAiCard dari={rangeDari} sampai={rangeSampai} />
           <Card className="shadow-card">
             <CardContent className="flex flex-wrap items-end gap-3 p-4">
               <div className="space-y-1">

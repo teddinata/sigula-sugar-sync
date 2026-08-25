@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Console\Commands;
 
 use App\Enums\StatusPenderes;
-use App\Enums\StatusPetani;
 use App\Models\Petani;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
@@ -36,7 +35,7 @@ class ImporPetani extends Command
         'kode_lahan' => ['kode lahan', 'kode_lahan', 'kodelahan', 'kode', 'no lahan'],
         'rt_rw' => ['rt/rw', 'rt rw', 'rt_rw', 'rtrw'],
         'status_penderes' => ['status', 'status penderes', 'status_penderes', 'jenis'],
-        'nomor_member' => ['nomor member', 'no member', 'nomor_member', 'no'],
+        'aktif' => ['aktif', 'status aktif', 'masih aktif'],
         'kontak' => ['kontak', 'hp', 'no hp', 'telepon', 'wa'],
         'alamat' => ['alamat', 'desa', 'dusun'],
     ];
@@ -82,21 +81,14 @@ class ImporPetani extends Command
                     ? Petani::query()->where('kode_lahan', $kodeLahan)->first()
                     : Petani::query()->where('nama', $nama)->first();
 
-                $nomorMember = trim((string) ($data['nomor_member'] ?? '')) ?: null;
-                $nomorMember = $nomorMember !== null && preg_match('/^\d{3}$/', $nomorMember) === 1
-                    ? $nomorMember
-                    : null;
-
                 $atribut = [
                     'nama' => $nama,
+                    // Kode lahan sekaligus nomor member; terisi = Member.
                     'kode_lahan' => $kodeLahan,
                     'rt_rw' => trim((string) ($data['rt_rw'] ?? '')) ?: null,
                     'kontak' => trim((string) ($data['kontak'] ?? '')) ?: null,
                     'alamat' => trim((string) ($data['alamat'] ?? '')) ?: null,
-                    'status' => $nomorMember !== null
-                        ? StatusPetani::MEMBER->value
-                        : StatusPetani::NON_MEMBER->value,
-                    'nomor_member' => $nomorMember,
+                    'aktif' => $this->bacaAktif($data['aktif'] ?? null),
                 ];
 
                 if ($petani === null) {
@@ -147,6 +139,21 @@ class ImporPetani extends Command
         }
 
         return self::SUCCESS;
+    }
+
+    /**
+     * Kolom `aktif` opsional. Kosong dianggap aktif; "0", "tidak", "nonaktif",
+     * dan "false" dianggap tidak aktif.
+     */
+    private function bacaAktif(?string $nilai): bool
+    {
+        $nilai = mb_strtolower(trim((string) $nilai));
+
+        if ($nilai === '') {
+            return true;
+        }
+
+        return ! in_array($nilai, ['0', 'tidak', 'nonaktif', 'non-aktif', 'false', 'no', 'n'], true);
     }
 
     /**

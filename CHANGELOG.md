@@ -48,18 +48,36 @@ Revisi fitur dari dokumen `dokumentasi-fitur-tambahan-SIGULA.pdf`.
 - **Tombol "Tambah Karyawan" di form produksi.** Karyawan baru langsung terpilih ke slot
   yang masih kosong, tanpa harus pindah ke halaman Master.
 - **Cetak thermal 58mm** untuk kwitansi pembelian dan slip gaji.
+- **Tombol Export (CSV/Excel/PDF)** di halaman Pembelian, Produksi, Penggajian,
+  Penjualan, Stok, dan Keuangan — filter yang sedang aktif ikut terbawa ke isi file.
+- **Kartu Ringkasan Keuangan AI** di halaman Keuangan; dibuat saat diminta (bukan
+  otomatis) karena tiap panggilan model berbiaya, dengan tombol buat ulang untuk
+  melewati cache 30 menit.
 - **Endpoint versi publik** `GET /api/v1/versi` + popup pengingat pembaruan di frontend.
 - **Versi aplikasi tampil di sidebar** supaya mudah memastikan pengguna sudah update.
 - **Data operasional client** lewat `DataClientSeeder`: 195 petani Desa Batuanten
   (beserta kode lahan, RT/RW, dan status penderesnya), 5 pengepul, dan 33 karyawan
   pemasak. CSV sumbernya disimpan di `backend/database/data/petani-batuanten.csv`.
   Idempoten — menjalankan ulang memperbarui, tidak menggandakan.
+- **Perintah ganti password** `php artisan sigula:ganti-password <email>` (atau
+  `--semua`) — password diketik interaktif sehingga tidak masuk shell history, dan
+  seluruh token Sanctum akun itu ikut dicabut.
 - **Perintah impor petani** `php artisan sigula:impor-petani <file.csv>` — header dan
   pemisah dideteksi otomatis, status kombinasi (`PMS + PLMR`) dipecah sendiri, dan
   menjalankan ulang memperbarui data alih-alih menggandakannya (`--uji-coba` untuk
   melihat hasilnya tanpa menyimpan).
 
 ### Diubah
+
+- **Identitas petani disatukan.** Kode lahan (mis. `BA-002`) sekaligus berfungsi
+  sebagai nomor member, jadi kolom `nomor_member` dilebur ke `kode_lahan` dan kolom
+  `status` dihapus — Member/Non-Member kini disimpulkan dari terisi atau tidaknya kode
+  lahan. Generator nomor member 3 digit ikut dihapus.
+- **Petani bisa dinonaktifkan** (kolom `aktif`) tanpa menghapus riwayat transaksinya;
+  daftar hanya menampilkan yang aktif kecuali `?sertakanNonaktif=1`.
+- **Tabel petani bisa diatur kolomnya.** RT/RW jadi kolom tersendiri; Status Member,
+  Kontak, dan Alamat disembunyikan secara default dan bisa dimunculkan lewat tombol
+  **Kolom**. Pilihannya diingat per browser.
 
 - **Tungku boleh dikerjakan satu karyawan.** `karyawan2Id` jadi opsional; tanpa rekan
   kerja, seluruh hasil menjadi porsi satu orang (tidak dibagi dua).

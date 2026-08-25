@@ -21,48 +21,68 @@ class MasterDataTest extends TestCase
         $this->travelTo('2026-08-13 09:00:00');
     }
 
-    public function test_petani_member_mendapat_nomor_otomatis(): void
+    /** Kode lahan sekaligus nomor member: terisi berarti Member. */
+    public function test_petani_dengan_kode_lahan_otomatis_jadi_member(): void
     {
         $this->masukSebagai(Role::STAFF_GUDANG);
 
-        $response = $this->postJson('/api/v1/petani', [
+        $this->postJson('/api/v1/petani', [
             'nama' => 'Sukirman',
-            'status' => 'Member',
+            'kodeLahan' => 'BA-002',
+            'rtRw' => '01/01',
             'kontak' => '0812-3344-5566',
             'alamat' => 'Desa Sukamaju',
-        ])->assertCreated();
-
-        $response->assertJsonPath('data.status', 'Member')
-            ->assertJsonPath('data.nomorMember', '201')
-            ->assertJsonPath('data.labelMember', 'Petani 201');
-
-        $kedua = $this->postJson('/api/v1/petani', ['nama' => 'Kastam', 'status' => 'member'])->assertCreated();
-        $kedua->assertJsonPath('data.nomorMember', '202');
+        ])->assertCreated()
+            ->assertJsonPath('data.status', 'Member')
+            ->assertJsonPath('data.kodeLahan', 'BA-002')
+            // nomorMember & labelMember menunjuk nilai yang sama.
+            ->assertJsonPath('data.nomorMember', 'BA-002')
+            ->assertJsonPath('data.labelMember', 'BA-002')
+            ->assertJsonPath('data.aktif', true);
     }
 
-    public function test_petani_non_member_tidak_menyimpan_nomor(): void
+    public function test_petani_tanpa_kode_lahan_jadi_non_member(): void
     {
         $this->masukSebagai();
 
-        $this->postJson('/api/v1/petani', [
-            'nama' => 'Tarjo',
-            'status' => 'Non-Member',
-            'nomorMember' => '250',
-        ])->assertCreated()->assertJsonPath('data.nomorMember', '');
+        $this->postJson('/api/v1/petani', ['nama' => 'Tarjo'])
+            ->assertCreated()
+            ->assertJsonPath('data.status', 'Non-Member')
+            ->assertJsonPath('data.nomorMember', '');
 
-        $this->assertNull(Petani::query()->firstOrFail()->nomor_member);
+        $this->assertNull(Petani::query()->firstOrFail()->kode_lahan);
     }
 
-    public function test_nomor_member_tidak_boleh_kembar(): void
+    public function test_kode_lahan_tidak_boleh_kembar(): void
     {
         $this->masukSebagai();
-        Petani::factory()->create(['nomor_member' => '231']);
+        Petani::factory()->create(['kode_lahan' => 'BA-231']);
 
         $this->postJson('/api/v1/petani', [
             'nama' => 'Darsono',
-            'status' => 'Member',
-            'nomorMember' => '231',
-        ])->assertStatus(422)->assertJsonValidationErrors('nomorMember');
+            'kodeLahan' => 'BA-231',
+        ])->assertStatus(422)->assertJsonValidationErrors('kodeLahan');
+    }
+
+    public function test_petani_bisa_dinonaktifkan_tanpa_menghapus_riwayat(): void
+    {
+        $this->masukSebagai();
+        $petani = Petani::factory()->create(['nama' => 'Dasirin']);
+
+        $this->postJson('/api/v1/pembelian', [
+            'tanggal' => '2026-08-13', 'petaniId' => $petani->id, 'grade' => 'NS 1', 'kg' => 100,
+        ])->assertCreated();
+
+        $this->putJson("/api/v1/petani/{$petani->id}", ['nama' => 'Dasirin', 'aktif' => false])
+            ->assertOk()
+            ->assertJsonPath('data.aktif', false);
+
+        $this->assertFalse($petani->refresh()->aktif);
+        $this->assertNotSoftDeleted('petani', ['id' => $petani->id]);
+
+        // Default daftar hanya menampilkan yang aktif.
+        $this->assertCount(0, $this->getJson('/api/v1/petani')->assertOk()->json('data'));
+        $this->assertCount(1, $this->getJson('/api/v1/petani?sertakanNonaktif=1')->assertOk()->json('data'));
     }
 
     public function test_petani_dengan_transaksi_tidak_bisa_dihapus(): void
@@ -78,14 +98,14 @@ class MasterDataTest extends TestCase
         $this->assertNotSoftDeleted('petani', ['id' => $petani->id]);
     }
 
-    public function test_pencarian_petani_berdasarkan_nama_dan_nomor(): void
+    public function test_pencarian_petani_berdasarkan_nama_dan_kode_lahan(): void
     {
         $this->masukSebagai();
-        Petani::factory()->create(['nama' => 'Haji Wardi', 'nomor_member' => '214']);
-        Petani::factory()->create(['nama' => 'Sukirman', 'nomor_member' => '231']);
+        Petani::factory()->create(['nama' => 'Haji Wardi', 'kode_lahan' => 'BA-214']);
+        Petani::factory()->create(['nama' => 'Sukirman', 'kode_lahan' => 'BA-231']);
 
         $this->assertCount(1, $this->getJson('/api/v1/petani?q=Wardi')->assertOk()->json('data'));
-        $this->assertCount(1, $this->getJson('/api/v1/petani?q=231')->assertOk()->json('data'));
+        $this->assertCount(1, $this->getJson('/api/v1/petani?q=BA-231')->assertOk()->json('data'));
         $this->assertCount(2, $this->getJson('/api/v1/petani')->assertOk()->json('data'));
     }
 

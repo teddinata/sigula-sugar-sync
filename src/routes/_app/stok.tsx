@@ -35,6 +35,7 @@ import { todayISO } from "@/lib/sigula-seed";
 import { ApiError } from "@/lib/api-client";
 import type { JenisMutasi, KartuStokRow } from "@/lib/api/stok";
 import { useKartuStok, useStokOpname, useStokPosisi } from "@/hooks/use-stok";
+import { ExportButton } from "@/components/sigula/export-button";
 
 export const Route = createFileRoute("/_app/stok")({
   head: () => ({
@@ -194,9 +195,21 @@ function StokPage() {
         title="Manajemen Stok"
         subtitle="Posisi stok dan kartu stok keluar-masuk"
         action={
-          <Button onClick={bukaOpname} variant="outline">
-            <ClipboardCheck className="mr-2 size-4" /> Stok Opname
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <ExportButton
+              jenis="kartu-stok"
+              label="Export Kartu Stok"
+              params={{
+                dari: dari || undefined,
+                sampai: sampai || undefined,
+                kategori: fKategori === "semua" ? undefined : fKategori,
+                jenis: fJenis === "semua" ? undefined : fJenis,
+              }}
+            />
+            <Button onClick={bukaOpname} variant="outline">
+              <ClipboardCheck className="mr-2 size-4" /> Stok Opname
+            </Button>
+          </div>
         }
       />
 
