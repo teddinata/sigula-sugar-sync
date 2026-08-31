@@ -24,6 +24,10 @@ class UserResource extends JsonResource
             // Dipakai frontend untuk menyusun sidebar & menyembunyikan aksi terlarang.
             'menu' => $this->role->menu(),
             'abilities' => $this->role->abilities(),
+            // Menandai baris "diri sendiri" di menu Pengguna, supaya UI bisa
+            // mencegah owner mengunci dirinya sendiri keluar.
+            'diriSendiri' => $request->user()?->getKey() === $this->id,
+            'dibuatPada' => $this->created_at?->toIso8601String(),
         ];
     }
 }

@@ -14,6 +14,7 @@ class UserSeeder extends Seeder
     {
         $akun = [
             ['name' => 'Shoffal (Owner)', 'email' => 'owner@nirasarimurni.com', 'role' => Role::OWNER],
+            ['name' => 'Admin', 'email' => 'admin@nirasarimurni.com', 'role' => Role::ADMIN],
             ['name' => 'Staff Gudang', 'email' => 'gudang@nirasarimurni.com', 'role' => Role::STAFF_GUDANG],
             ['name' => 'Staff Produksi', 'email' => 'produksi@nirasarimurni.com', 'role' => Role::STAFF_PRODUKSI],
         ];

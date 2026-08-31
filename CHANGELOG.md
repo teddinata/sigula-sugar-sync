@@ -35,6 +35,22 @@ Revisi fitur dari dokumen `dokumentasi-fitur-tambahan-SIGULA.pdf`.
 
 ### Ditambahkan
 
+- **Role Admin.** Menjalankan seluruh operasional harian (petani, master, pembelian,
+  stok, produksi, penggajian, penjualan) tapi tidak bisa membuka menu Keuangan —
+  laba rugi, biaya operasional, dan ringkasan AI tertutup untuknya, termasuk kartu
+  pendapatan/laba di Dashboard.
+- **Kelola Pengguna** (`/api/v1/pengguna`), khusus Owner yang sekaligus berperan
+  superadmin: membuat akun, mengatur role, menonaktifkan, dan mengganti password.
+  Owner tidak bisa menurunkan role atau menonaktifkan akunnya sendiri, dan sistem
+  menolak perubahan yang menyisakan nol Owner aktif.
+- **Audit Log jadi menu tersendiri** dengan ability `lihat-audit` (Owner + Admin),
+  lengkap dengan filter per modul, rentang tanggal, dan pencarian teks. Sebelumnya
+  terkubur sebagai tab di halaman Keuangan sehingga Admin tidak bisa membukanya.
+- **Login dan logout ikut tercatat** di audit log (`auth.login`, `auth.logout`).
+- **Guard rute di frontend**: membuka URL menu terlarang langsung dialihkan ke
+  Dashboard dengan pesan, bukan menampilkan halaman yang gagal memuat.
+- Akun seeder keempat: `admin@nirasarimurni.com` dengan role Admin.
+
 - **Status penderes petani (bisa lebih dari satu).** Satu petani boleh menyandang
   beberapa status sekaligus (mis. `PMS + PLMD`), disimpan sebagai relasi di tabel
   `petani_status`. Tujuh kode: PMS, PMMS, PLMR, PLMD, PLS, PL, PM. Daftar petani bisa

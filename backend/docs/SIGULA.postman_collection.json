@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "5163d1a0-9b2c-4f7e-a1d3-si6ula20260813",
     "name": "SIGULA API v1 — PT Nira Sari Murni",
-    "description": "Koleksi lengkap 63 endpoint SIGULA (Sistem Informasi Gula Terintegrasi).\n\n## Cara pakai\n\n1. Import file ini + `SIGULA.postman_environment.json`, pilih environment **SIGULA — Lokal**.\n2. Jalankan **Autentikasi → Login**. Token otomatis tersimpan ke variable `token`, jadi semua request lain langsung terautentikasi.\n3. Request bertanda ⭐ menyimpan id hasilnya ke collection variable (`petaniId`, `sesiId`, dst) sehingga folder bisa dijalankan berurutan lewat **Runner**.\n\nSeluruh koleksi aman dijalankan sekaligus lewat **Runner** — request Logout ditaruh di folder terakhir.\n\nVariable `{{tanggalHariIni}}` diisi otomatis (YYYY-MM-DD) oleh pre-request script koleksi, jadi contoh body selalu memakai tanggal hari ini.\n\n## Konvensi\n\n- Auth: `Authorization: Bearer <token>` (Sanctum), diatur di level koleksi.\n- Sukses: `{ \"data\": ..., \"message\": \"...\" }`. Endpoint transaksi berpaginasi menambah `meta`.\n- Error **422** (validasi maupun aturan bisnis) selalu sama bentuknya:\n  `{ \"message\": \"...\", \"errors\": { \"field\": [\"...\"] } }`\n- **401** token tidak valid · **403** role tidak berhak · **429** rate limit login (10/menit).\n- Enum menerima label (`\"NS 1\"`) maupun kode (`\"ns1\"`); response mengirim keduanya (`grade` + `gradeKode`).\n\n## Akun seeder\n\n| Email | Role |\n|---|---|\n| owner@nirasarimurni.com | Owner (semua modul) |\n| gudang@nirasarimurni.com | Staff Gudang (petani, pembelian, stok) |\n| produksi@nirasarimurni.com | Staff Produksi (sesi tungku) |\n\nPassword default: `password`.\n\n## Perubahan v1.1.0\n\n- Petani bisa punya lebih dari satu status penderes (`statusPenderes`), plus `kodeLahan` & `rtRw`.\n- Modul **Pengepul** baru; pembelian bisa dicatat lewat perantara (`pengepulId`).\n- Sesi tungku menerima beberapa grade sekaligus (`bahan[]`) dan boleh dikerjakan satu karyawan.\n- Batas atas rendemen dihapus — hasil boleh melebihi bahan mentah.\n- Total pembelian & gaji dibulatkan ke kelipatan 500; nilai aslinya tetap dikirim sebagai `totalSebelumBulat`.\n- Endpoint publik `GET /api/v1/versi` untuk deteksi rilis baru di frontend.\n",
+    "description": "Koleksi lengkap 68 endpoint SIGULA (Sistem Informasi Gula Terintegrasi).\n\n## Cara pakai\n\n1. Import file ini + `SIGULA.postman_environment.json`, pilih environment **SIGULA — Lokal**.\n2. Jalankan **Autentikasi → Login**. Token otomatis tersimpan ke variable `token`, jadi semua request lain langsung terautentikasi.\n3. Request bertanda ⭐ menyimpan id hasilnya ke collection variable (`petaniId`, `sesiId`, dst) sehingga folder bisa dijalankan berurutan lewat **Runner**.\n\nSeluruh koleksi aman dijalankan sekaligus lewat **Runner** — request Logout ditaruh di folder terakhir.\n\nVariable `{{tanggalHariIni}}` diisi otomatis (YYYY-MM-DD) oleh pre-request script koleksi, jadi contoh body selalu memakai tanggal hari ini.\n\n## Konvensi\n\n- Auth: `Authorization: Bearer <token>` (Sanctum), diatur di level koleksi.\n- Sukses: `{ \"data\": ..., \"message\": \"...\" }`. Endpoint transaksi berpaginasi menambah `meta`.\n- Error **422** (validasi maupun aturan bisnis) selalu sama bentuknya:\n  `{ \"message\": \"...\", \"errors\": { \"field\": [\"...\"] } }`\n- **401** token tidak valid · **403** role tidak berhak · **429** rate limit login (10/menit).\n- Enum menerima label (`\"NS 1\"`) maupun kode (`\"ns1\"`); response mengirim keduanya (`grade` + `gradeKode`).\n\n## Akun seeder\n\n| Email | Role |\n|---|---|\n| owner@nirasarimurni.com | Owner (semua modul) |\n| gudang@nirasarimurni.com | Staff Gudang (petani, pembelian, stok) |\n| produksi@nirasarimurni.com | Staff Produksi (sesi tungku) |\n\nPassword default: `password`.\n\n## Perubahan v1.1.0\n\n- Petani bisa punya lebih dari satu status penderes (`statusPenderes`), plus `kodeLahan` & `rtRw`.\n- Modul **Pengepul** baru; pembelian bisa dicatat lewat perantara (`pengepulId`).\n- Sesi tungku menerima beberapa grade sekaligus (`bahan[]`) dan boleh dikerjakan satu karyawan.\n- Batas atas rendemen dihapus — hasil boleh melebihi bahan mentah.\n- Total pembelian & gaji dibulatkan ke kelipatan 500; nilai aslinya tetap dikirim sebagai `totalSebelumBulat`.\n- Endpoint publik `GET /api/v1/versi` untuk deteksi rilis baru di frontend.\n\n\n## Role & hak akses\n\n| Role | Keuangan | Kelola Pengguna | Audit Log |\n|---|---|---|---|\n| Owner (superadmin) | ya | ya | ya |\n| Admin | **tidak** | tidak | ya |\n| Staff Gudang | tidak | tidak | tidak |\n| Staff Produksi | tidak | tidak | tidak |\n",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -105,6 +105,11 @@
     },
     {
       "key": "pengepulId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "penggunaId",
       "value": "",
       "type": "string"
     }
@@ -2344,60 +2349,6 @@
           "response": []
         },
         {
-          "name": "Audit log",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Accept",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/audit-log?aksi=&userId=&dari=&sampai=&page=1&perPage=50",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "audit-log"
-              ],
-              "query": [
-                {
-                  "key": "aksi",
-                  "value": "",
-                  "description": "Prefix, mis. harga. / produksi. / gaji. / stok."
-                },
-                {
-                  "key": "userId",
-                  "value": "",
-                  "description": "Filter pelaku"
-                },
-                {
-                  "key": "dari",
-                  "value": "",
-                  "description": "YYYY-MM-DD"
-                },
-                {
-                  "key": "sampai",
-                  "value": "",
-                  "description": "YYYY-MM-DD"
-                },
-                {
-                  "key": "page",
-                  "value": "1"
-                },
-                {
-                  "key": "perPage",
-                  "value": "50",
-                  "description": "Maks 200"
-                }
-              ]
-            },
-            "description": "Jejak audit perubahan harga, tarif gaji, transaksi pembelian/penjualan, produksi, stok opname, dan pembayaran gaji — lengkap dengan siapa, kapan, dan dari IP mana.\n\n```json\n{ \"data\": [ {\n  \"aksi\": \"harga.ubah\",\n  \"deskripsi\": \"Harga NS 1 diubah dari Rp 14.500 menjadi Rp 15.200 per kg\",\n  \"user\": { \"id\": \"1\", \"nama\": \"Shoffal (Owner)\", \"role\": \"owner\" },\n  \"data\": { \"grade\": \"ns1\", \"harga_lama\": 14500, \"harga_baru\": 15200 },\n  \"ip\": \"127.0.0.1\", \"waktu\": \"2026-08-13T16:19:40+07:00\"\n} ],\n  \"meta\": { \"currentPage\": 1, \"lastPage\": 12, \"perPage\": 50, \"total\": 587 } }\n```"
-          },
-          "response": []
-        },
-        {
           "name": "Export laba rugi (CSV/XLSX/PDF)",
           "request": {
             "method": "GET",
@@ -2545,7 +2496,227 @@
       ]
     },
     {
-      "name": "11. Logout (jalankan paling akhir)",
+      "name": "10b. Audit Log",
+      "item": [
+        {
+          "name": "Audit log",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/audit-log?aksi=&userId=&dari=&sampai=&page=1&perPage=50",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "audit-log"
+              ],
+              "query": [
+                {
+                  "key": "aksi",
+                  "value": "",
+                  "description": "Prefix, mis. harga. / produksi. / gaji. / stok."
+                },
+                {
+                  "key": "userId",
+                  "value": "",
+                  "description": "Filter pelaku"
+                },
+                {
+                  "key": "dari",
+                  "value": "",
+                  "description": "YYYY-MM-DD"
+                },
+                {
+                  "key": "sampai",
+                  "value": "",
+                  "description": "YYYY-MM-DD"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "perPage",
+                  "value": "50",
+                  "description": "Maks 200"
+                }
+              ]
+            },
+            "description": "Ability terpisah `lihat-audit`: Owner dan Admin bisa membukanya, Staff tidak.\n\n`aksi` adalah PREFIX, mis. `produksi.`, `auth.`, `user.`."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "11. Kelola Pengguna (Owner)",
+      "item": [
+        {
+          "name": "Daftar pengguna",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/pengguna?q=&role=&sertakanNonaktif=0",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "pengguna"
+              ],
+              "query": [
+                {
+                  "key": "q",
+                  "value": ""
+                },
+                {
+                  "key": "role",
+                  "value": ""
+                },
+                {
+                  "key": "sertakanNonaktif",
+                  "value": "0"
+                }
+              ]
+            },
+            "description": "Hanya Owner. Default menampilkan akun aktif saja."
+          }
+        },
+        {
+          "name": "Daftar role + hak aksesnya",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/pengguna/role",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "pengguna",
+                "role"
+              ]
+            },
+            "description": "Untuk dropdown pemilihan role; tiap role membawa daftar menu yang bisa dibukanya."
+          }
+        },
+        {
+          "name": "⭐ Tambah pengguna",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/pengguna",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "pengguna"
+              ]
+            },
+            "description": "Role yang tersedia: owner, admin, staff_gudang, staff_produksi. Password minimal 8 karakter.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nama\": \"Admin Kantor\",\n  \"email\": \"admin.kantor@nirasarimurni.com\",\n  \"password\": \"RahasiaBaru123\",\n  \"role\": \"admin\",\n  \"aktif\": true\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.data && json.data.id) { pm.collectionVariables.set('penggunaId', json.data.id); }",
+                  "pm.test('201 Created', () => pm.response.to.have.status(201));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Ubah pengguna",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/pengguna/{{penggunaId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "pengguna",
+                "{{penggunaId}}"
+              ]
+            },
+            "description": "`password` opsional — kosongkan bila tidak diganti. Mengubah role atau password otomatis mencabut seluruh token akun tersebut.\n\nOwner tidak bisa mengubah role atau menonaktifkan akunnya sendiri (422).",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nama\": \"Admin Kantor\",\n  \"role\": \"staff_gudang\",\n  \"aktif\": true\n}"
+            }
+          }
+        },
+        {
+          "name": "Hapus pengguna",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/pengguna/{{penggunaId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "pengguna",
+                "{{penggunaId}}"
+              ]
+            },
+            "description": "Ditolak bila targetnya akun sendiri, atau bila itu Owner aktif terakhir."
+          }
+        }
+      ]
+    },
+    {
+      "name": "12. Logout (jalankan paling akhir)",
       "description": "Sengaja dipisah agar tidak mencabut token di tengah Collection Runner.",
       "item": [
         {

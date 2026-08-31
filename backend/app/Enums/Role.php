@@ -12,6 +12,7 @@ enum Role: string
     use ResolvesFromInput;
 
     case OWNER = 'owner';
+    case ADMIN = 'admin';
     case STAFF_GUDANG = 'staff_gudang';
     case STAFF_PRODUKSI = 'staff_produksi';
 
@@ -19,8 +20,20 @@ enum Role: string
     {
         return match ($this) {
             self::OWNER => 'Owner',
+            self::ADMIN => 'Admin',
             self::STAFF_GUDANG => 'Staff Gudang',
             self::STAFF_PRODUKSI => 'Staff Produksi',
+        };
+    }
+
+    /** Penjelasan singkat untuk dropdown pemilihan role di menu Pengguna. */
+    public function keterangan(): string
+    {
+        return match ($this) {
+            self::OWNER => 'Akses penuh, termasuk keuangan dan pengelolaan pengguna',
+            self::ADMIN => 'Seluruh operasional harian, tanpa akses keuangan',
+            self::STAFF_GUDANG => 'Petani, pembelian, dan stok',
+            self::STAFF_PRODUKSI => 'Sesi tungku dan hasil produksi',
         };
     }
 
@@ -41,6 +54,24 @@ enum Role: string
                 'lihat-produksi', 'kelola-produksi',
                 'lihat-penggajian', 'kelola-penggajian',
                 'lihat-penjualan', 'kelola-penjualan',
+                'lihat-audit',
+                // Owner sekaligus superadmin: hanya dia yang boleh membuat akun
+                // dan mengubah role orang lain.
+                'lihat-user', 'kelola-user',
+            ],
+
+            // Admin menjalankan operasional penuh, tapi angka keuntungan
+            // perusahaan (laba rugi, biaya operasional) tertutup untuknya.
+            self::ADMIN => [
+                'lihat-dashboard',
+                'lihat-master', 'kelola-master',
+                'lihat-petani', 'kelola-petani',
+                'lihat-pembelian', 'kelola-pembelian',
+                'lihat-stok', 'kelola-stok',
+                'lihat-produksi', 'kelola-produksi',
+                'lihat-penggajian', 'kelola-penggajian',
+                'lihat-penjualan', 'kelola-penjualan',
+                'lihat-audit',
             ],
             self::STAFF_GUDANG => [
                 'lihat-dashboard',
@@ -77,6 +108,8 @@ enum Role: string
             'penggajian' => 'lihat-penggajian',
             'penjualan' => 'lihat-penjualan',
             'keuangan' => 'lihat-keuangan',
+            'audit' => 'lihat-audit',
+            'pengguna' => 'lihat-user',
         ];
 
         return array_values(array_keys(array_filter($menu, fn (string $ability): bool => $this->can($ability))));

@@ -11,11 +11,13 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppRouteImport } from './routes/_app'
+import { Route as AppAuditRouteImport } from './routes/_app/audit'
 import { Route as AppDashboardRouteImport } from './routes/_app/dashboard'
 import { Route as AppKeuanganRouteImport } from './routes/_app/keuangan'
 import { Route as AppMasterRouteImport } from './routes/_app/master'
 import { Route as AppPembelianRouteImport } from './routes/_app/pembelian'
 import { Route as AppPenggajianRouteImport } from './routes/_app/penggajian'
+import { Route as AppPenggunaRouteImport } from './routes/_app/pengguna'
 import { Route as AppPenjualanRouteImport } from './routes/_app/penjualan'
 import { Route as AppPetaniRouteImport } from './routes/_app/petani'
 import { Route as AppProduksiRouteImport } from './routes/_app/produksi'
@@ -29,6 +31,11 @@ const IndexRoute = IndexRouteImport.update({
 const AppRoute = AppRouteImport.update({
   id: '/_app',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AppAuditRoute = AppAuditRouteImport.update({
+  id: '/audit',
+  path: '/audit',
+  getParentRoute: () => AppRoute,
 } as any)
 const AppDashboardRoute = AppDashboardRouteImport.update({
   id: '/dashboard',
@@ -55,6 +62,11 @@ const AppPenggajianRoute = AppPenggajianRouteImport.update({
   path: '/penggajian',
   getParentRoute: () => AppRoute,
 } as any)
+const AppPenggunaRoute = AppPenggunaRouteImport.update({
+  id: '/pengguna',
+  path: '/pengguna',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppPenjualanRoute = AppPenjualanRouteImport.update({
   id: '/penjualan',
   path: '/penjualan',
@@ -78,11 +90,13 @@ const AppStokRoute = AppStokRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/audit': typeof AppAuditRoute
   '/dashboard': typeof AppDashboardRoute
   '/keuangan': typeof AppKeuanganRoute
   '/master': typeof AppMasterRoute
   '/pembelian': typeof AppPembelianRoute
   '/penggajian': typeof AppPenggajianRoute
+  '/pengguna': typeof AppPenggunaRoute
   '/penjualan': typeof AppPenjualanRoute
   '/petani': typeof AppPetaniRoute
   '/produksi': typeof AppProduksiRoute
@@ -90,11 +104,13 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/audit': typeof AppAuditRoute
   '/dashboard': typeof AppDashboardRoute
   '/keuangan': typeof AppKeuanganRoute
   '/master': typeof AppMasterRoute
   '/pembelian': typeof AppPembelianRoute
   '/penggajian': typeof AppPenggajianRoute
+  '/pengguna': typeof AppPenggunaRoute
   '/penjualan': typeof AppPenjualanRoute
   '/petani': typeof AppPetaniRoute
   '/produksi': typeof AppProduksiRoute
@@ -104,11 +120,13 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_app': typeof AppRouteWithChildren
+  '/_app/audit': typeof AppAuditRoute
   '/_app/dashboard': typeof AppDashboardRoute
   '/_app/keuangan': typeof AppKeuanganRoute
   '/_app/master': typeof AppMasterRoute
   '/_app/pembelian': typeof AppPembelianRoute
   '/_app/penggajian': typeof AppPenggajianRoute
+  '/_app/pengguna': typeof AppPenggunaRoute
   '/_app/penjualan': typeof AppPenjualanRoute
   '/_app/petani': typeof AppPetaniRoute
   '/_app/produksi': typeof AppProduksiRoute
@@ -118,11 +136,13 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/audit'
     | '/dashboard'
     | '/keuangan'
     | '/master'
     | '/pembelian'
     | '/penggajian'
+    | '/pengguna'
     | '/penjualan'
     | '/petani'
     | '/produksi'
@@ -130,11 +150,13 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/audit'
     | '/dashboard'
     | '/keuangan'
     | '/master'
     | '/pembelian'
     | '/penggajian'
+    | '/pengguna'
     | '/penjualan'
     | '/petani'
     | '/produksi'
@@ -143,11 +165,13 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/_app'
+    | '/_app/audit'
     | '/_app/dashboard'
     | '/_app/keuangan'
     | '/_app/master'
     | '/_app/pembelian'
     | '/_app/penggajian'
+    | '/_app/pengguna'
     | '/_app/penjualan'
     | '/_app/petani'
     | '/_app/produksi'
@@ -174,6 +198,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/'
       preLoaderRoute: typeof AppRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_app/audit': {
+      id: '/_app/audit'
+      path: '/audit'
+      fullPath: '/audit'
+      preLoaderRoute: typeof AppAuditRouteImport
+      parentRoute: typeof AppRoute
     }
     '/_app/dashboard': {
       id: '/_app/dashboard'
@@ -210,6 +241,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppPenggajianRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/pengguna': {
+      id: '/_app/pengguna'
+      path: '/pengguna'
+      fullPath: '/pengguna'
+      preLoaderRoute: typeof AppPenggunaRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/penjualan': {
       id: '/_app/penjualan'
       path: '/penjualan'
@@ -242,11 +280,13 @@ declare module '@tanstack/react-router' {
 }
 
 interface AppRouteChildren {
+  AppAuditRoute: typeof AppAuditRoute
   AppDashboardRoute: typeof AppDashboardRoute
   AppKeuanganRoute: typeof AppKeuanganRoute
   AppMasterRoute: typeof AppMasterRoute
   AppPembelianRoute: typeof AppPembelianRoute
   AppPenggajianRoute: typeof AppPenggajianRoute
+  AppPenggunaRoute: typeof AppPenggunaRoute
   AppPenjualanRoute: typeof AppPenjualanRoute
   AppPetaniRoute: typeof AppPetaniRoute
   AppProduksiRoute: typeof AppProduksiRoute
@@ -254,11 +294,13 @@ interface AppRouteChildren {
 }
 
 const AppRouteChildren: AppRouteChildren = {
+  AppAuditRoute: AppAuditRoute,
   AppDashboardRoute: AppDashboardRoute,
   AppKeuanganRoute: AppKeuanganRoute,
   AppMasterRoute: AppMasterRoute,
   AppPembelianRoute: AppPembelianRoute,
   AppPenggajianRoute: AppPenggajianRoute,
+  AppPenggunaRoute: AppPenggunaRoute,
   AppPenjualanRoute: AppPenjualanRoute,
   AppPetaniRoute: AppPetaniRoute,
   AppProduksiRoute: AppProduksiRoute,
@@ -274,13 +316,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}

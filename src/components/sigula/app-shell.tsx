@@ -7,6 +7,8 @@ import {
   LayoutDashboard,
   LogOut,
   Menu,
+  ScrollText,
+  ShieldCheck,
   ShoppingCart,
   Sprout,
   Tags,
@@ -29,6 +31,8 @@ const MENU = [
   { key: "penggajian", to: "/penggajian", label: "Penggajian", icon: Users },
   { key: "penjualan", to: "/penjualan", label: "Penjualan", icon: TrendingUp },
   { key: "keuangan", to: "/keuangan", label: "Keuangan", icon: Wallet },
+  { key: "audit", to: "/audit", label: "Audit Log", icon: ScrollText },
+  { key: "pengguna", to: "/pengguna", label: "Kelola Pengguna", icon: ShieldCheck },
 ] as const;
 
 function initials(nama: string): string {

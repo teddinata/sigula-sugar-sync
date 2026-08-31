@@ -67,6 +67,25 @@ aturan bisnis:
 
 ---
 
+## Role & hak akses
+
+| Role | Keuangan | Kelola Pengguna | Audit Log | Operasional |
+| --- | --- | --- | --- | --- |
+| **Owner** (sekaligus superadmin) | ya | ya | ya | ya |
+| **Admin** | **tidak** | tidak | ya | ya |
+| **Staff Gudang** | tidak | tidak | tidak | petani, pembelian, stok |
+| **Staff Produksi** | tidak | tidak | tidak | sesi tungku |
+
+Admin menjalankan operasional penuh — termasuk penggajian dan penjualan — tapi angka
+keuntungan perusahaan tertutup untuknya. Karena itu blok `keuangan` dan `tren` juga
+tidak ikut dikirim di `GET /dashboard` untuk role selain Owner; menyembunyikan menunya
+saja percuma kalau angkanya tetap muncul di halaman depan.
+
+Ability lengkap tiap role bisa dilihat lewat `GET /pengguna/role`, dan menu yang boleh
+dibuka ikut dikirim pada `GET /auth/me` sebagai `menu`.
+
+---
+
 ## 0. Versi Aplikasi
 
 ### `GET /versi`
@@ -87,6 +106,46 @@ bundel yang sedang jalan lebih lama, frontend menampilkan popup pembaruan **waji
 
 ---
 
+## 11. Kelola Pengguna
+
+Hanya Owner. Setiap perubahan tercatat di audit log (`user.simpan`, `user.ubah`,
+`user.hapus`).
+
+| Method | Endpoint          | Keterangan                                   |
+| ------ | ----------------- | -------------------------------------------- |
+| GET    | `/pengguna`       | `?q=`, `?role=`, `?sertakanNonaktif=1`       |
+| GET    | `/pengguna/role`  | Daftar role + keterangan + menu yang dibukanya |
+| POST   | `/pengguna`       |                                              |
+| PUT    | `/pengguna/{id}`  | `password` opsional                          |
+| DELETE | `/pengguna/{id}`  |                                              |
+
+```jsonc
+// POST request
+{ "nama": "Admin Kantor", "email": "admin.kantor@nirasarimurni.com",
+  "password": "RahasiaBaru123", "role": "admin", "aktif": true }
+
+// response 201
+{ "message": "Akun pengguna berhasil dibuat.",
+  "data": { "id": "4", "nama": "Admin Kantor", "email": "admin.kantor@nirasarimurni.com",
+            "role": "admin", "roleLabel": "Admin", "aktif": true,
+            "menu": ["dashboard", "petani", "..."], "abilities": ["..."],
+            "diriSendiri": false } }
+```
+
+**Pengaman.** Owner tidak bisa mengubah role atau menonaktifkan/menghapus akunnya
+sendiri, dan sistem menolak perubahan yang menyisakan nol Owner aktif — dua-duanya
+akan mengunci semua orang keluar tanpa cara memulihkan. Mengganti role atau password
+otomatis mencabut seluruh token Sanctum akun itu, jadi sesi lama langsung mati.
+
+Password juga bisa diganti dari server tanpa lewat API:
+
+```bash
+php artisan sigula:ganti-password owner@nirasarimurni.com
+php artisan sigula:ganti-password --semua
+```
+
+---
+
 ## 1. Autentikasi
 
 ### `POST /auth/login`
@@ -104,6 +163,9 @@ bundel yang sedang jalan lebih lama, frontend menampilkan popup pembaruan **waji
               "menu": ["dashboard","petani","master","pembelian","stok","produksi","penggajian","penjualan","keuangan"],
               "abilities": ["lihat-dashboard","lihat-keuangan", "..."] } } }
 ```
+
+Login dan logout ikut tercatat di audit log (`auth.login`, `auth.logout`) beserta IP
+dan nama perangkatnya.
 
 ### `GET /auth/me` · `POST /auth/logout`
 

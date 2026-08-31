@@ -10,6 +10,7 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { defineConfig, type Plugin } from "vite";
 import react from "@vitejs/plugin-react";
+import { tanstackRouter } from "@tanstack/router-plugin/vite";
 import tailwindcss from "@tailwindcss/vite";
 import tsConfigPaths from "vite-tsconfig-paths";
 
@@ -46,7 +47,16 @@ function tulisVersionJson(): Plugin {
 }
 
 export default defineConfig({
-  plugins: [react(), tailwindcss(), tsConfigPaths(), tulisVersionJson()],
+  plugins: [
+    // Meregenerasi src/routeTree.gen.ts dari isi src/routes. Tanpa ini, halaman
+    // baru tidak akan pernah terdaftar di build SPA — jalur Lovable memakai
+    // plugin yang sama lewat konfigurasinya sendiri.
+    tanstackRouter({ target: "react", autoCodeSplitting: false }),
+    react(),
+    tailwindcss(),
+    tsConfigPaths(),
+    tulisVersionJson(),
+  ],
   define: {
     // Ditanam saat build supaya aplikasi tahu versi dirinya sendiri.
     "import.meta.env.VITE_APP_VERSION": JSON.stringify(versi),

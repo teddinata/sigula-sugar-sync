@@ -1,4 +1,5 @@
 import { apiClient } from "@/lib/api-client";
+import type { RoleKode } from "@/lib/api/pengguna";
 
 /**
  * Bentuk data persis seperti UserResource (backend/app/Http/Resources/UserResource.php)
@@ -8,12 +9,15 @@ export interface AuthUser {
   id: string;
   nama: string;
   email: string;
-  role: "owner" | "staff_gudang" | "staff_produksi";
+  role: RoleKode;
   roleLabel: string;
   aktif: boolean;
   /** Kunci menu sidebar yang boleh diakses role ini, mis. ["dashboard", "petani", ...]. */
   menu: string[];
   abilities: string[];
+  /** true bila baris ini akun yang sedang login (hanya relevan di menu Pengguna). */
+  diriSendiri?: boolean;
+  dibuatPada?: string | null;
 }
 
 export interface LoginPayload {

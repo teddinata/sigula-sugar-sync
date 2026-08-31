@@ -19,6 +19,7 @@ use App\Http\Controllers\Api\V1\PenjualanController;
 use App\Http\Controllers\Api\V1\PetaniController;
 use App\Http\Controllers\Api\V1\SesiTungkuController;
 use App\Http\Controllers\Api\V1\StokController;
+use App\Http\Controllers\Api\V1\UserController;
 use App\Http\Controllers\Api\V1\VersiController;
 use Illuminate\Support\Facades\Route;
 
@@ -138,6 +139,17 @@ Route::prefix('v1')->group(function (): void {
             Route::delete('penjualan/{penjualan}', [PenjualanController::class, 'destroy']);
         });
 
+        // ---- Pengguna (khusus Owner sebagai superadmin) --------------------
+        Route::middleware('can:lihat-user')->group(function (): void {
+            Route::get('pengguna', [UserController::class, 'index']);
+            Route::get('pengguna/role', [UserController::class, 'role']);
+        });
+        Route::middleware('can:kelola-user')->group(function (): void {
+            Route::post('pengguna', [UserController::class, 'store']);
+            Route::put('pengguna/{pengguna}', [UserController::class, 'update']);
+            Route::delete('pengguna/{pengguna}', [UserController::class, 'destroy']);
+        });
+
         // ---- Keuangan & Laporan -------------------------------------------
         Route::middleware('can:lihat-keuangan')->group(function (): void {
             Route::get('keuangan/laba-rugi', [LaporanController::class, 'labaRugi']);
@@ -146,8 +158,11 @@ Route::prefix('v1')->group(function (): void {
             Route::get('keuangan/biaya', [BiayaOperasionalController::class, 'index']);
             Route::get('keuangan/biaya/export', [ExportController::class, 'biaya']);
             Route::get('keuangan/laba-rugi/export', [ExportController::class, 'labaRugi']);
-            Route::get('audit-log', [AuditLogController::class, 'index']);
         });
+
+        // Audit log bukan data keuangan: Admin perlu melihatnya untuk menelusuri
+        // siapa mengubah apa, tanpa ikut membuka laba rugi.
+        Route::get('audit-log', [AuditLogController::class, 'index'])->middleware('can:lihat-audit');
         Route::middleware('can:kelola-keuangan')->group(function (): void {
             Route::post('keuangan/biaya', [BiayaOperasionalController::class, 'store']);
             Route::put('keuangan/biaya/{biaya}', [BiayaOperasionalController::class, 'update']);
