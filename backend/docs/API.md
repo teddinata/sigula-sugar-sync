@@ -521,6 +521,10 @@ Filter: `kategori`, `jenis` (`masuk`/`keluar`), `dari`, `sampai`, `q` (keteranga
 
 ### `POST /stok/opname`
 
+Dipakai juga untuk **mengisi stok awal** saat sistem mulai dipakai: kirim `stokFisik`
+apa adanya, sistem menghitung selisihnya terhadap saldo sekarang lalu mencatatnya
+sebagai satu mutasi masuk/keluar di kartu stok.
+
 ```jsonc
 {
     "kategori": "NS 1",

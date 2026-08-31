@@ -75,6 +75,13 @@ Revisi fitur dari dokumen `dokumentasi-fitur-tambahan-SIGULA.pdf`.
   (beserta kode lahan, RT/RW, dan status penderesnya), 5 pengepul, dan 33 karyawan
   pemasak. CSV sumbernya disimpan di `backend/database/data/petani-batuanten.csv`.
   Idempoten — menjalankan ulang memperbarui, tidak menggandakan.
+- **Perintah `sigula:reset-transaksi`** — mengosongkan seluruh data transaksi
+  (pembelian, produksi, penjualan, gaji, biaya, kartu stok, audit log, penomoran)
+  sambil mempertahankan master data dan akun pengguna. Saldo stok dinolkan, bukan
+  dihapus, supaya jadi titik awal stok opname pertama. Backup dibuat otomatis.
+- **Perintah `sigula:stok-awal`** — mengisi saldo stok awal lewat mekanisme stok
+  opname, jadi ikut tercatat di kartu stok dan audit log:
+  `php artisan sigula:stok-awal --kg="ns1=22193"`.
 - **Perintah ganti password** `php artisan sigula:ganti-password <email>` (atau
   `--semua`) — password diketik interaktif sehingga tidak masuk shell history, dan
   seluruh token Sanctum akun itu ikut dicabut.
