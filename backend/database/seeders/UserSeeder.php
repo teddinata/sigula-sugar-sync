@@ -20,16 +20,23 @@ class UserSeeder extends Seeder
         ];
 
         foreach ($akun as $data) {
-            User::query()->updateOrCreate(
-                ['email' => $data['email']],
-                [
-                    'name' => $data['name'],
-                    'password' => config('sigula.default_password'),
-                    'role' => $data['role']->value,
-                    'aktif' => true,
-                    'email_verified_at' => now(),
-                ],
-            );
+            $user = User::query()->firstWhere('email', $data['email']);
+
+            if ($user !== null) {
+                // Akun yang sudah ada TIDAK disentuh passwordnya. Seeder ini
+                // dijalankan ulang tiap kali ada akun bawaan baru, dan menimpa
+                // password di sini akan mengembalikan seluruh akun ke password
+                // default — termasuk yang sudah diganti owner.
+                continue;
+            }
+
+            User::query()->create([
+                'name' => $data['name'],
+                'email' => $data['email'],
+                'password' => config('sigula.default_password'),
+                'role' => $data['role']->value,
+                'aktif' => true,
+            ])->forceFill(['email_verified_at' => now()])->save();
         }
     }
 }
