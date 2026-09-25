@@ -458,7 +458,7 @@ final class ProduksiService
             throw new BusinessRuleException(sprintf(
                 'Sesi tidak bisa dibatalkan karena gaji periode %s — %s untuk karyawan terkait sudah dibayarkan.',
                 Periode::tanggalIndonesia($periode['senin']),
-                Periode::tanggalIndonesia($periode['jumat']),
+                Periode::tanggalIndonesia($periode['minggu']),
             ));
         }
     }

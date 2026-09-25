@@ -19,7 +19,9 @@ class PembelianRequest extends FormRequest
             'petaniId' => ['required', Rule::exists('petani', 'id')->whereNull('deleted_at')],
             'pengepulId' => ['nullable', Rule::exists('pengepul', 'id')->whereNull('deleted_at')],
             'grade' => ['required', Rule::in(Grade::acceptedInputs())],
-            'kg' => ['required', 'numeric', 'gt:0', 'max:9999999'],
+            // Maks 2 desimal, sama dengan presisi kolom — lebih dari itu akan
+            // terpotong diam-diam saat disimpan.
+            'kg' => ['required', 'numeric', 'gt:0', 'max:9999999', 'decimal:0,2'],
             // Dikosongkan berarti pakai harga master yang berlaku pada tanggal transaksi.
             'harga' => ['nullable', 'numeric', 'gt:0', 'max:99999999'],
             'statusPembayaran' => ['nullable', Rule::in(StatusPembayaran::acceptedInputs())],
@@ -32,6 +34,7 @@ class PembelianRequest extends FormRequest
     {
         return [
             'kg.gt' => 'Kilogram harus lebih dari 0.',
+            'kg.decimal' => 'Kilogram maksimal 2 angka di belakang koma.',
             'harga.gt' => 'Harga per kg harus lebih dari 0.',
             'petaniId.exists' => 'Petani tidak ditemukan.',
         ];

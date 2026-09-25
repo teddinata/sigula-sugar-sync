@@ -214,12 +214,12 @@ final class LaporanExportService
         ];
     }
 
-    /** Rekap gaji satu periode Senin-Jumat. */
+    /** Rekap gaji satu periode Senin-Minggu. */
     public function penggajian(?string $tanggalDalamMinggu = null): array
     {
         $rekap = $this->penggajian->rekapMinggu($tanggalDalamMinggu);
         $senin = $rekap['periode']['senin'];
-        $jumat = $rekap['periode']['jumat'];
+        $minggu = $rekap['periode']['minggu'];
 
         $baris = [];
         foreach ($rekap['baris'] as $b) {
@@ -232,7 +232,11 @@ final class LaporanExportService
                 CsvExport::angka($b['upahBrondol']),
                 CsvExport::angka($b['uangMakan']),
                 CsvExport::angka($b['total']),
-                $b['dibayar'] ? 'Sudah Dibayar' : 'Belum Dibayar',
+                match (true) {
+                    $b['dibayar'] => 'Sudah Dibayar',
+                    $b['sudahDibayarkan'] > 0 => 'Kurang Bayar '.CsvExport::angka($b['kurangBayar'], 0),
+                    default => 'Belum Dibayar',
+                },
             ];
         }
 
@@ -242,11 +246,11 @@ final class LaporanExportService
         $baris[] = ['', '', '', '', '', '', 'Belum dibayar', CsvExport::angka($r['belumDibayar']), ''];
 
         return [
-            'namaFile' => CsvExport::namaFile('penggajian', $senin, $jumat),
+            'namaFile' => CsvExport::namaFile('penggajian', $senin, $minggu),
             'judul' => [
                 self::PERUSAHAAN,
                 'REKAP GAJI MINGGUAN',
-                'Periode: '.$rekap['periode']['label'].' (dibayarkan Jumat)',
+                'Periode: '.$rekap['periode']['label'],
                 sprintf(
                     'Tarif: Kristal Rp %s/kg · Brondol Rp %s/kg · Uang makan Rp %s/hari',
                     CsvExport::angka($rekap['tarif']['kristal'], 0),

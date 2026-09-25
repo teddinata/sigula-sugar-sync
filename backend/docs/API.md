@@ -628,14 +628,14 @@ tersebut sudah dibayarkan.
 ### `GET /penggajian?tanggal=2026-08-13`
 
 `tanggal` boleh hari apa saja dalam minggu yang dimaksud — sistem mengunci ke periode
-Senin–Jumat. Tanpa parameter berarti minggu berjalan.
+Senin–Minggu. Tanpa parameter berarti minggu berjalan.
 
 ```jsonc
 {
     "data": {
         "periode": {
             "senin": "2026-08-10",
-            "jumat": "2026-08-14",
+            "minggu": "2026-08-16",
             "label": "10 Agustus 2026 — 14 Agustus 2026",
         },
         "tarif": { "kristal": 1150, "brondol": 800, "uangMakan": 5000 },
@@ -804,7 +804,7 @@ laporan keuangan maupun penggajian.
 | `GET /pembelian/export` | Rincian pembelian bahan | `lihat-pembelian` |
 | `GET /penjualan/export` | Invoice, kristal & brondol terpisah | `lihat-penjualan` |
 | `GET /produksi/sesi/export` | Rincian per sesi tungku | `lihat-produksi` |
-| `GET /penggajian/export` | Rekap gaji Senin–Jumat | `lihat-penggajian` |
+| `GET /penggajian/export` | Rekap gaji Senin–Minggu | `lihat-penggajian` |
 | `GET /stok/kartu/export` | Histori mutasi stok | `lihat-stok` |
 
 ### Parameter

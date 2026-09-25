@@ -194,7 +194,7 @@ class ExportLaporanTest extends TestCase
         $csv = $this->isiCsv($this->get('/api/v1/penggajian/export?tanggal=2026-08-13'));
 
         $this->assertStringContainsString('REKAP GAJI MINGGUAN', $csv);
-        $this->assertStringContainsString('dibayarkan Jumat', $csv);
+        $this->assertStringContainsString('Periode: 10 Agustus 2026 — 16 Agustus 2026', $csv);
         $this->assertStringContainsString('Kristal Rp 1150/kg', $csv);
         $this->assertStringContainsString('Pardi', $csv);
         // Masing-masing karyawan: 40 kg kristal, 10 kg brondol, 1 hari kerja

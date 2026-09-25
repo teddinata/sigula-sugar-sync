@@ -18,15 +18,24 @@ export function rupiah(value: number): string {
   return "Rp " + n.toLocaleString("id-ID");
 }
 
-export function angka(value: number, digits = 0): string {
+/**
+ * Format angka gaya Indonesia.
+ *
+ * Tanpa `digits`: desimal hanya ditampilkan bila memang ada, maksimal 2 digit
+ * (104,8 tetap 104,8 — bukan dibulatkan jadi 105; 250 tetap 250). Kg bahan dan
+ * hasil produksi boleh desimal, jadi pembulatan diam-diam akan menyesatkan.
+ *
+ * Dengan `digits`: jumlah desimal dipaksa tetap, mis. angka(12.5, 1) -> "12,5".
+ */
+export function angka(value: number, digits?: number): string {
   return (value || 0).toLocaleString("id-ID", {
-    minimumFractionDigits: digits,
-    maximumFractionDigits: digits,
+    minimumFractionDigits: digits ?? 0,
+    maximumFractionDigits: digits ?? 2,
   });
 }
 
 export function kg(value: number): string {
-  return angka(value, value % 1 === 0 ? 0 : 1) + " kg";
+  return angka(value) + " kg";
 }
 
 /** "2026-08-08" -> "8 Agustus 2026" */

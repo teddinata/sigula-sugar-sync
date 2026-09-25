@@ -190,4 +190,34 @@ class PembelianTest extends TestCase
         $this->assertEqualsWithDelta(1_450_000.0 + 475_000.0, $ringkasan['bulanIni'], 0.01);
         $this->assertSame(2, Pembelian::query()->count());
     }
+
+    /** Kilogram desimal disimpan apa adanya, tidak dibulatkan. */
+    public function test_kilogram_desimal_tidak_dibulatkan(): void
+    {
+        $this->masukSebagai();
+
+        $data = $this->postJson('/api/v1/pembelian', [
+            'tanggal' => '2026-08-13',
+            'petaniId' => $this->petani()->id,
+            'grade' => 'NS 1',
+            'kg' => 104.8,
+        ])->assertCreated()->json('data');
+
+        $this->assertEqualsWithDelta(104.8, $data['kg'], 0.0001);
+        $this->assertEqualsWithDelta(104.8, $this->saldo(KategoriStok::NS1), 0.0001);
+        // 104,8 x 14.500 = 1.519.600 -> dibulatkan ke 1.520.000
+        $this->assertEqualsWithDelta(1_519_600.0, $data['totalSebelumBulat'], 0.01);
+    }
+
+    public function test_kilogram_lebih_dari_dua_desimal_ditolak(): void
+    {
+        $this->masukSebagai();
+
+        $this->postJson('/api/v1/pembelian', [
+            'tanggal' => '2026-08-13',
+            'petaniId' => $this->petani()->id,
+            'grade' => 'NS 1',
+            'kg' => 104.855,
+        ])->assertStatus(422)->assertJsonValidationErrors('kg');
+    }
 }

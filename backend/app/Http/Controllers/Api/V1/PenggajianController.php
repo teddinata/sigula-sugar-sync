@@ -14,7 +14,7 @@ class PenggajianController extends Controller
     public function __construct(private readonly PenggajianService $penggajian) {}
 
     /**
-     * Rekap gaji satu periode Senin-Jumat.
+     * Rekap gaji satu periode Senin-Minggu.
      * Query `tanggal` boleh tanggal mana pun dalam minggu yang dimaksud.
      */
     public function index(Request $request): JsonResponse
@@ -53,7 +53,7 @@ class PenggajianController extends Controller
             'data' => [
                 'karyawanId' => (string) $gaji->karyawan_id,
                 'periodeSenin' => $gaji->periode_senin->toDateString(),
-                'periodeJumat' => $gaji->periode_jumat->toDateString(),
+                'periodeMinggu' => $gaji->periode_minggu->toDateString(),
                 'total' => (float) $gaji->total,
                 'status' => $gaji->status->label(),
                 'dibayarPada' => $gaji->dibayar_pada?->toIso8601String(),

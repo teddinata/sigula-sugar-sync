@@ -16,7 +16,7 @@ class GajiMingguan extends Model
     protected $fillable = [
         'karyawan_id',
         'periode_senin',
-        'periode_jumat',
+        'periode_minggu',
         'kg_kristal',
         'kg_brondol',
         'hari_kerja',
@@ -34,7 +34,7 @@ class GajiMingguan extends Model
     {
         return [
             'periode_senin' => 'date:Y-m-d',
-            'periode_jumat' => 'date:Y-m-d',
+            'periode_minggu' => 'date:Y-m-d',
             'kg_kristal' => 'float',
             'kg_brondol' => 'float',
             'hari_kerja' => 'integer',

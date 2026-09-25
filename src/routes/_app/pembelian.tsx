@@ -641,6 +641,8 @@ function PembelianPage() {
                 <Input
                   type="number"
                   min={0}
+                  step="0.01"
+                  inputMode="decimal"
                   value={form.kg}
                   onChange={(e) => setForm({ ...form, kg: e.target.value })}
                   placeholder="0"

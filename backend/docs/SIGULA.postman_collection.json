@@ -1716,7 +1716,7 @@
                 {
                   "key": "tanggal",
                   "value": "{{tanggalHariIni}}",
-                  "description": "Tanggal MANA SAJA dalam minggu yang dimaksud — sistem mengunci ke periode Senin-Jumat. Kosong = minggu berjalan"
+                  "description": "Tanggal MANA SAJA dalam minggu yang dimaksud — sistem mengunci ke periode Senin-Minggu. Kosong = minggu berjalan"
                 },
                 {
                   "key": "sertakanTanpaProduksi",

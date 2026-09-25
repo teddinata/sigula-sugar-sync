@@ -5,9 +5,10 @@ import { apiClient } from "@/lib/api-client";
  * SIGULA.postman_collection.json, cross-check ke PenggajianController /
  * PenggajianService.
  *
- * Periode gaji: SENIN s.d. JUMAT. `tanggal` di semua endpoint boleh tanggal
- * MANA SAJA dalam minggu yang dimaksud — backend mengunci ke periode
- * Senin-Jumat sendiri (`Periode::mingguKerja`), bukan cuma menerima hari Senin.
+ * Periode gaji: SENIN s.d. MINGGU (kerja Sabtu/Minggu ikut terhitung). Hari
+ * bayarnya tidak tetap; kalau karyawan masih bekerja setelah gajinya dibayar,
+ * selisihnya muncul sebagai `kurangBayar` dan dibayar lewat endpoint yang sama.
+ * `tanggal` boleh tanggal MANA SAJA dalam minggu yang dimaksud.
  */
 
 export interface BarisGaji {
@@ -22,7 +23,12 @@ export interface BarisGaji {
   /** Hasil hitungan sebelum dibulatkan ke kelipatan 500. */
   totalSebelumBulat: number;
   total: number;
+  /** Lunas: pernah dibayar dan tidak ada kekurangan. */
   dibayar: boolean;
+  /** Nominal yang sudah diserahkan sejauh ini (0 bila belum pernah dibayar). */
+  sudahDibayarkan: number;
+  /** Sisa yang belum dibayar: total - sudahDibayarkan. */
+  kurangBayar: number;
   dibayarPada: string | null;
   /** Produksi berubah setelah gaji dibayar (snapshot vs live berbeda) — perlu ditinjau manual. */
   adaPerubahanSetelahDibayar: boolean;
@@ -30,7 +36,7 @@ export interface BarisGaji {
 
 export interface PeriodeGaji {
   senin: string;
-  jumat: string;
+  minggu: string;
   label: string;
 }
 
@@ -84,13 +90,16 @@ export async function getSlipGaji(karyawanId: string, tanggal?: string): Promise
 export interface BayarGajiResult {
   karyawanId: string;
   periodeSenin: string;
-  periodeJumat: string;
+  periodeMinggu: string;
   total: number;
   status: string;
   dibayarPada: string | null;
 }
 
-/** Idempoten — memanggil ulang untuk karyawan yang sudah dibayar tidak error. */
+/**
+ * Membayar gaji, atau kekurangannya bila sebagian sudah dibayar. Idempoten —
+ * memanggil ulang saat tidak ada kekurangan tidak mengubah apa pun.
+ */
 export async function bayarGaji(
   karyawanId: string,
   tanggal?: string,

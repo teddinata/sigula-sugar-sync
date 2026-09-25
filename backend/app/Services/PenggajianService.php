@@ -19,7 +19,8 @@ use Illuminate\Support\Facades\DB;
 /**
  * Penggajian mingguan.
  *
- * Periode gaji perusahaan: SENIN s.d. JUMAT, dibayarkan tiap Jumat.
+ * Periode gaji perusahaan: SENIN s.d. MINGGU. Hari bayarnya tidak tetap, dan
+ * kekurangan akibat produksi setelah gaji dibayar bisa dibayar susulan.
  * Sumber data satu-satunya adalah produksi_karyawan (porsi hasil yang sudah
  * dibagi otomatis oleh modul produksi) — modul ini tidak membagi ulang, hanya
  * menjumlahkan.
@@ -40,7 +41,7 @@ final class PenggajianService
 
     /**
      * @return array{
-     *     periode: array{senin: string, jumat: string, label: string},
+     *     periode: array{senin: string, minggu: string, label: string},
      *     tarif: array{kristal: float, brondol: float, uangMakan: float},
      *     baris: array<int, array<string, mixed>>,
      *     ringkasan: array{totalGaji: float, belumDibayar: float, sudahDibayar: float, jumlahKaryawan: int}
@@ -50,9 +51,9 @@ final class PenggajianService
     {
         $periode = Periode::mingguKerja($tanggalDalamMinggu);
         $senin = $periode['senin']->toDateString();
-        $jumat = $periode['jumat']->toDateString();
+        $minggu = $periode['minggu']->toDateString();
 
-        $hitungan = $this->hitungPerKaryawan($senin, $jumat);
+        $hitungan = $this->hitungPerKaryawan($senin, $minggu);
 
         $snapshot = GajiMingguan::query()
             ->whereDate('periode_senin', $senin)
@@ -82,21 +83,20 @@ final class PenggajianService
         usort($baris, static fn (array $a, array $b): int => $b['total'] <=> $a['total']);
 
         $totalGaji = round(array_sum(array_column($baris, 'total')), 2);
-        $sudahDibayar = round(array_sum(array_map(
-            static fn (array $b): float => $b['dibayar'] ? (float) $b['total'] : 0.0,
-            $baris
-        )), 2);
+        // Dihitung dari nominal yang benar-benar sudah diserahkan, jadi
+        // kekurangan bayar susulan ikut terhitung sebagai "belum dibayar".
+        $sudahDibayar = round(array_sum(array_column($baris, 'sudahDibayarkan')), 2);
 
         return [
             'periode' => [
                 'senin' => $senin,
-                'jumat' => $jumat,
-                'label' => Periode::tanggalIndonesia($senin).' — '.Periode::tanggalIndonesia($jumat),
+                'minggu' => $minggu,
+                'label' => Periode::tanggalIndonesia($senin).' — '.Periode::tanggalIndonesia($minggu),
             ],
             'tarif' => [
-                'kristal' => $this->tarif->tarifBerlaku(JenisTarif::KRISTAL, $jumat),
-                'brondol' => $this->tarif->tarifBerlaku(JenisTarif::BRONDOL, $jumat),
-                'uangMakan' => $this->tarif->tarifBerlaku(JenisTarif::UANG_MAKAN, $jumat),
+                'kristal' => $this->tarif->tarifBerlaku(JenisTarif::KRISTAL, $minggu),
+                'brondol' => $this->tarif->tarifBerlaku(JenisTarif::BRONDOL, $minggu),
+                'uangMakan' => $this->tarif->tarifBerlaku(JenisTarif::UANG_MAKAN, $minggu),
             ],
             'baris' => $baris,
             'ringkasan' => [
@@ -138,9 +138,9 @@ final class PenggajianService
     {
         $periode = Periode::mingguKerja($tanggalDalamMinggu);
         $senin = $periode['senin']->toDateString();
-        $jumat = $periode['jumat']->toDateString();
+        $minggu = $periode['minggu']->toDateString();
 
-        return DB::transaction(function () use ($karyawanId, $senin, $jumat, $user): GajiMingguan {
+        return DB::transaction(function () use ($karyawanId, $senin, $minggu, $user): GajiMingguan {
             $karyawan = Karyawan::query()->findOrFail($karyawanId);
 
             $existing = GajiMingguan::query()
@@ -149,23 +149,33 @@ final class PenggajianService
                 ->lockForUpdate()
                 ->first();
 
-            if ($existing !== null && $existing->sudahDibayar()) {
-                return $existing;
-            }
-
-            $hitungan = $this->hitungPerKaryawan($senin, $jumat)[$karyawan->id] ?? null;
+            $hitungan = $this->hitungPerKaryawan($senin, $minggu)[$karyawan->id] ?? null;
 
             if ($hitungan === null || $hitungan['total'] <= 0) {
+                if ($existing !== null && $existing->sudahDibayar()) {
+                    return $existing;
+                }
+
                 throw new BusinessRuleException(sprintf(
                     'Tidak ada data produksi untuk %s pada periode %s — %s.',
                     $karyawan->nama,
                     Periode::tanggalIndonesia($senin),
-                    Periode::tanggalIndonesia($jumat),
+                    Periode::tanggalIndonesia($minggu),
                 ));
             }
 
+            // Hari bayar tidak tetap: gaji bisa dibayar Jumat lalu karyawan masih
+            // memasak Sabtu/Minggu. Selisihnya dibayar susulan; bila tidak ada
+            // selisih, panggilan ulang tidak mengubah apa pun (idempoten).
+            $sudahDiserahkan = $existing !== null && $existing->sudahDibayar() ? (float) $existing->total : 0.0;
+            $kekurangan = round((float) $hitungan['total'] - $sudahDiserahkan, 2);
+
+            if ($existing !== null && $existing->sudahDibayar() && $kekurangan <= 0) {
+                return $existing;
+            }
+
             $atribut = [
-                'periode_jumat' => $jumat,
+                'periode_minggu' => $minggu,
                 'kg_kristal' => $hitungan['kgKristal'],
                 'kg_brondol' => $hitungan['kgBrondol'],
                 'hari_kerja' => $hitungan['hariKerja'],
@@ -187,17 +197,22 @@ final class PenggajianService
                     ...$atribut,
                 ]);
 
+            $susulan = $sudahDiserahkan > 0;
+
             $this->audit->catat(
-                'gaji.bayar',
+                $susulan ? 'gaji.bayar_susulan' : 'gaji.bayar',
                 sprintf(
-                    'Gaji %s periode %s — %s dibayarkan: Rp %s',
+                    $susulan
+                        ? 'Kekurangan gaji %s periode %s — %s dibayarkan: Rp %s (total jadi Rp %s)'
+                        : 'Gaji %s periode %s — %s dibayarkan: Rp %s',
                     $karyawan->nama,
                     Periode::tanggalIndonesia($senin),
-                    Periode::tanggalIndonesia($jumat),
+                    Periode::tanggalIndonesia($minggu),
+                    number_format($kekurangan, 0, ',', '.'),
                     number_format($hitungan['total'], 0, ',', '.'),
                 ),
                 $gaji,
-                $hitungan,
+                [...$hitungan, 'dibayarkan_kali_ini' => $kekurangan, 'sudah_diserahkan_sebelumnya' => $sudahDiserahkan],
                 $user,
             );
 
@@ -214,7 +229,7 @@ final class PenggajianService
         $dibayar = [];
 
         foreach ($rekap['baris'] as $baris) {
-            if ($baris['dibayar'] || (float) $baris['total'] <= 0) {
+            if ((float) $baris['kurangBayar'] <= 0) {
                 continue;
             }
 
@@ -385,10 +400,14 @@ final class PenggajianService
      */
     private function susunBaris(Karyawan $karyawan, array $live, ?GajiMingguan $dibayar): array
     {
-        $sudahDibayar = $dibayar?->sudahDibayar() ?? false;
+        $pernahDibayar = $dibayar?->sudahDibayar() ?? false;
+        $sudahDibayarkan = $pernahDibayar ? (float) $dibayar->total : 0.0;
+        $kurangBayar = max(round((float) $live['total'] - $sudahDibayarkan, 2), 0.0);
 
-        // Setelah dibayar, angka yang ditampilkan adalah snapshot pembayaran.
-        $nilai = $sudahDibayar
+        // Bila ada produksi baru setelah gaji dibayar (mis. dibayar Jumat, masih
+        // memasak Sabtu), yang ditampilkan adalah hitungan terbaru supaya
+        // kekurangannya kelihatan. Selain itu tampilkan snapshot pembayaran.
+        $nilai = $pernahDibayar && $kurangBayar <= 0
             ? [
                 'kgKristal' => (float) $dibayar->kg_kristal,
                 'kgBrondol' => (float) $dibayar->kg_brondol,
@@ -405,11 +424,13 @@ final class PenggajianService
             'karyawanId' => (string) $karyawan->id,
             'nama' => $karyawan->nama,
             ...$nilai,
-            'dibayar' => $sudahDibayar,
+            // "dibayar" = lunas: pernah dibayar DAN tidak ada kekurangan.
+            'dibayar' => $pernahDibayar && $kurangBayar <= 0,
+            'sudahDibayarkan' => $sudahDibayarkan,
+            'kurangBayar' => $kurangBayar,
             'dibayarPada' => $dibayar?->dibayar_pada?->toIso8601String(),
-            // Menandai sesi produksi yang berubah setelah gaji dibayarkan,
-            // supaya selisihnya bisa ditindaklanjuti manual oleh owner.
-            'adaPerubahanSetelahDibayar' => $sudahDibayar && abs($live['total'] - (float) $dibayar->total) > 0.01,
+            // Hitungan berbeda dari yang sudah dibayar (lebih atau kurang).
+            'adaPerubahanSetelahDibayar' => $pernahDibayar && abs($live['total'] - (float) $dibayar->total) > 0.01,
         ];
     }
 }

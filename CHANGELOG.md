@@ -29,6 +29,27 @@ versinya tidak naik.
 
 ---
 
+## [Belum dirilis]
+
+### Diubah
+
+- **Periode gaji jadi Senin–Minggu** (sebelumnya Senin–Jumat). Sesi tungku hari Sabtu
+  dan Minggu dulu tidak masuk periode mana pun sehingga upahnya hilang dari
+  penggajian. Kolom `gaji_mingguan.periode_jumat` diganti `periode_minggu`; API
+  mengirim `periode.minggu` dan `periodeMinggu`.
+- **Bayar kekurangan gaji.** Hari bayar tidak tetap (Jumat/Sabtu/Minggu), jadi bila
+  karyawan masih bekerja setelah gajinya dibayar, selisihnya tampil sebagai
+  "Kurang Rp …" dan dibayar lewat tombol **Bayar Kekurangan** (atau Bayar Semua).
+  Sebelumnya pembayaran kedua diabaikan dan upah tambahan itu tidak bisa dibayar.
+  Baris gaji kini membawa `sudahDibayarkan` dan `kurangBayar`.
+
+### Diperbaiki
+
+- Angka kilogram tidak lagi dibulatkan di tampilan: 104,8 kg tampil 104,8 kg, bukan
+  105 kg. Berlaku di semua halaman (pembelian, stok, produksi, dashboard).
+- Input kg pembelian menerima desimal di browser; backend menolak lebih dari 2
+  angka di belakang koma supaya tidak terpotong diam-diam saat disimpan.
+
 ## [1.1.0] — 2026-08-25
 
 Revisi fitur dari dokumen `dokumentasi-fitur-tambahan-SIGULA.pdf`.

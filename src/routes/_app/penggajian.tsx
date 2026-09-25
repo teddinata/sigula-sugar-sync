@@ -38,7 +38,7 @@ export const Route = createFileRoute("/_app/penggajian")({
       {
         name: "description",
         content:
-          "Hitung gaji karyawan periode Senin-Jumat: upah per kg gula kristal & brondol, uang makan harian, dan cetak slip gaji lengkap.",
+          "Hitung gaji karyawan periode Senin-Minggu: upah per kg gula kristal & brondol, uang makan harian, dan cetak slip gaji lengkap.",
       },
       { property: "og:title", content: "Penggajian Karyawan — SIGULA" },
       { property: "og:description", content: "Penggajian mingguan berbasis hasil sesi tungku." },
@@ -86,9 +86,12 @@ function PenggajianPage() {
     if (!bayarTarget) return;
     try {
       await bayarGaji.mutateAsync({ karyawanId: bayarTarget.karyawanId, tanggal: senin });
-      toast.success("Gaji dibayarkan", {
-        description: `${bayarTarget.nama} — ${rupiah(bayarTarget.total)}`,
-      });
+      toast.success(
+        bayarTarget.sudahDibayarkan > 0 ? "Kekurangan gaji dibayarkan" : "Gaji dibayarkan",
+        {
+          description: `${bayarTarget.nama} — ${rupiah(bayarTarget.kurangBayar)}`,
+        },
+      );
       setBayarTarget(null);
     } catch (e) {
       toast.error(apiErrorMessage(e, "Gagal membayar gaji karyawan ini."));
@@ -177,15 +180,24 @@ function PenggajianPage() {
         <div className="flex items-center gap-1.5">
           {r.dibayar ? (
             <Badge className="bg-success/15 text-success hover:bg-success/15">Sudah Dibayar</Badge>
+          ) : r.sudahDibayarkan > 0 ? (
+            // Sudah dibayar sebagian, lalu karyawan masih bekerja (mis. Sabtu/Minggu).
+            <Badge
+              className="bg-warning/25 text-warning-foreground hover:bg-warning/25"
+              title={`Sudah dibayarkan ${rupiah(r.sudahDibayarkan)}`}
+            >
+              Kurang {rupiah(r.kurangBayar)}
+            </Badge>
           ) : (
             <Badge className="bg-warning/25 text-warning-foreground hover:bg-warning/25">
               Belum Dibayar
             </Badge>
           )}
-          {r.adaPerubahanSetelahDibayar && (
+          {/* Hitungan turun setelah dibayar (kelebihan bayar) — tidak bisa dikoreksi otomatis. */}
+          {r.adaPerubahanSetelahDibayar && r.dibayar && (
             <span
-              title="Data produksi berubah setelah gaji ini dibayar — periksa manual"
-              aria-label="Data produksi berubah setelah gaji ini dibayar"
+              title="Hitungan produksi turun setelah gaji dibayar (ada kelebihan bayar) — periksa manual"
+              aria-label="Ada kelebihan bayar setelah gaji ini dibayar"
             >
               <AlertTriangle className="size-4 text-warning-foreground" />
             </span>
@@ -201,7 +213,7 @@ function PenggajianPage() {
         <div className="flex justify-end gap-1">
           {!r.dibayar && (
             <Button size="sm" onClick={() => setBayarTarget(r)}>
-              Bayar
+              {r.sudahDibayarkan > 0 ? "Bayar Kekurangan" : "Bayar"}
             </Button>
           )}
           <Button
@@ -221,10 +233,10 @@ function PenggajianPage() {
     <>
       <PageHeader
         title="Penggajian Karyawan"
-        subtitle="Periode Senin s.d. Jumat, dibayarkan setiap hari Jumat"
+        subtitle="Periode Senin s.d. Minggu — kerja Sabtu & Minggu ikut terhitung"
         action={
           <div className="flex flex-wrap gap-2">
-            {/* Rekap gaji selalu per periode Senin-Jumat yang sedang dibuka. */}
+            {/* Rekap gaji selalu per periode Senin-Minggu yang sedang dibuka. */}
             <ExportButton jenis="penggajian" label="Export Rekap" params={{ tanggal: senin }} />
             <Button
               onClick={() => setKonfirmasiBayarSemua(true)}
@@ -270,7 +282,7 @@ function PenggajianPage() {
           label="Total Gaji Minggu Ini"
           value={rekap ? rupiah(rekap.ringkasan.totalGaji) : "…"}
           tone="primary"
-          hint={rekap ? `Dibayarkan ${rekap.periode.jumat}` : undefined}
+          hint={rekap?.periode.label}
         />
         <StatCard
           label="Belum Dibayar"
@@ -316,7 +328,7 @@ function PenggajianPage() {
               empty={
                 <EmptyState
                   title="Belum ada data gaji"
-                  description="Tidak ada sesi tungku selesai pada periode Senin-Jumat ini."
+                  description="Tidak ada sesi tungku selesai pada periode Senin-Minggu ini."
                 />
               }
             />
@@ -331,13 +343,28 @@ function PenggajianPage() {
             <DialogTitle>Konfirmasi Pembayaran Gaji</DialogTitle>
           </DialogHeader>
           <p className="text-sm text-muted-foreground">
-            Bayar gaji <span className="font-medium text-foreground">{bayarTarget?.nama}</span>{" "}
-            sebesar{" "}
-            <span className="font-medium text-foreground">
-              {bayarTarget ? rupiah(bayarTarget.total) : ""}
-            </span>{" "}
-            untuk periode {rekap?.periode.label}? Gaji yang sudah ditandai dibayar tidak bisa
-            dibatalkan dari sini.
+            {bayarTarget && bayarTarget.sudahDibayarkan > 0 ? (
+              <>
+                <span className="font-medium text-foreground">{bayarTarget.nama}</span> sudah
+                dibayar {rupiah(bayarTarget.sudahDibayarkan)}, lalu masih bekerja setelahnya. Bayar
+                kekurangannya sebesar{" "}
+                <span className="font-medium text-foreground">
+                  {rupiah(bayarTarget.kurangBayar)}
+                </span>{" "}
+                (total periode {rupiah(bayarTarget.total)})?
+              </>
+            ) : (
+              <>
+                Bayar gaji <span className="font-medium text-foreground">{bayarTarget?.nama}</span>{" "}
+                sebesar{" "}
+                <span className="font-medium text-foreground">
+                  {bayarTarget ? rupiah(bayarTarget.total) : ""}
+                </span>{" "}
+                untuk periode {rekap?.periode.label}?
+              </>
+            )}{" "}
+            Pembayaran tidak bisa dibatalkan dari sini. Kalau karyawan masih bekerja sesudahnya,
+            kekurangannya akan muncul untuk dibayar susulan.
           </p>
           <DialogFooter>
             <Button variant="outline" onClick={() => setBayarTarget(null)}>
@@ -405,7 +432,16 @@ function PenggajianPage() {
               )}
               <GarisThermal />
               <BarisThermal label="TOTAL" value={rupiah(slip.baris.total)} tebal />
-              <BarisThermal label="Status" value={slip.baris.dibayar ? "DIBAYAR" : "BELUM"} />
+              <BarisThermal
+                label="Status"
+                value={
+                  slip.baris.dibayar
+                    ? "DIBAYAR"
+                    : slip.baris.sudahDibayarkan > 0
+                      ? `KURANG ${rupiah(slip.baris.kurangBayar)}`
+                      : "BELUM"
+                }
+              />
               <GarisThermal />
               <p className="mt-1 text-center text-[10px]">Terima kasih</p>
             </>
@@ -449,7 +485,13 @@ function PenggajianPage() {
                 <PrintRow label="Total gaji" value={rupiah(slip.baris.total)} strong />
                 <PrintRow
                   label="Status"
-                  value={slip.baris.dibayar ? "SUDAH DIBAYAR" : "BELUM DIBAYAR"}
+                  value={
+                    slip.baris.dibayar
+                      ? "SUDAH DIBAYAR"
+                      : slip.baris.sudahDibayarkan > 0
+                        ? `KURANG BAYAR ${rupiah(slip.baris.kurangBayar)}`
+                        : "BELUM DIBAYAR"
+                  }
                 />
               </div>
             </div>

@@ -20,7 +20,7 @@ class PenggajianTest extends TestCase
     {
         parent::setUp();
         $this->seedMaster();
-        // Kamis 13 Agustus 2026 — periode gaji berjalan: Senin 10 s.d. Jumat 14.
+        // Kamis 13 Agustus 2026 — periode gaji berjalan: Senin 10 s.d. Minggu 16.
         $this->travelTo('2026-08-13 09:00:00');
     }
 
@@ -67,24 +67,116 @@ class PenggajianTest extends TestCase
         $this->assertEqualsWithDelta(15_000.0, $baris['uangMakan'], 0.01);
     }
 
-    /** Periode gaji Senin-Jumat: produksi Sabtu/Minggu tidak masuk periode ini. */
-    public function test_periode_gaji_hanya_senin_sampai_jumat(): void
+    /** Periode gaji Senin-Minggu: kerja Sabtu & Minggu ikut terhitung. */
+    public function test_periode_gaji_senin_sampai_minggu(): void
     {
         $this->masukSebagai();
         $asep = $this->karyawan('Asep');
         $pardi = $this->karyawan('Pardi');
 
-        $this->sesiSelesai($asep, $pardi, '2026-08-14', 100, 80, 20); // Jumat, masuk
-        $this->sesiSelesai($asep, $pardi, '2026-08-15', 100, 80, 20); // Sabtu, tidak masuk
+        $this->sesiSelesai($asep, $pardi, '2026-08-14', 100, 80, 20); // Jumat
+        $this->sesiSelesai($asep, $pardi, '2026-08-15', 100, 80, 20); // Sabtu
+        $this->sesiSelesai($asep, $pardi, '2026-08-16', 100, 80, 20); // Minggu
+        $this->sesiSelesai($asep, $pardi, '2026-08-17', 100, 80, 20); // Senin depan — periode lain
 
         $response = $this->getJson('/api/v1/penggajian?tanggal=2026-08-13')->assertOk();
 
         $this->assertSame('2026-08-10', $response->json('data.periode.senin'));
-        $this->assertSame('2026-08-14', $response->json('data.periode.jumat'));
+        $this->assertSame('2026-08-16', $response->json('data.periode.minggu'));
 
         $baris = collect($response->json('data.baris'))->firstWhere('karyawanId', (string) $asep->id);
-        $this->assertEqualsWithDelta(40.0, $baris['kgKristal'], 0.001);
-        $this->assertEquals(1, $baris['hariKerja']);
+        // Jumat + Sabtu + Minggu = 3 sesi x (80 / 2)
+        $this->assertEqualsWithDelta(120.0, $baris['kgKristal'], 0.001);
+        $this->assertEquals(3, $baris['hariKerja']);
+    }
+
+    /** Hari Minggu masuk periode yang dimulai Senin sebelumnya, bukan sesudahnya. */
+    public function test_membuka_periode_dari_hari_minggu_tetap_periode_yang_sama(): void
+    {
+        $this->masukSebagai();
+
+        $this->getJson('/api/v1/penggajian?tanggal=2026-08-16')
+            ->assertOk()
+            ->assertJsonPath('data.periode.senin', '2026-08-10')
+            ->assertJsonPath('data.periode.minggu', '2026-08-16');
+    }
+
+    /**
+     * Hari bayar tidak tetap: dibayar Jumat, karyawan masih memasak Sabtu.
+     * Kekurangannya harus bisa dibayar susulan, bukan hilang.
+     */
+    public function test_kerja_setelah_gaji_dibayar_muncul_sebagai_kekurangan_dan_bisa_dibayar(): void
+    {
+        $this->masukSebagai();
+        $asep = $this->karyawan('Asep');
+        $pardi = $this->karyawan('Pardi');
+
+        // Jumat: 40 kg kristal + 10 kg brondol per orang
+        // = 40 x 1.150 + 10 x 800 + 5.000 = 59.000
+        $this->sesiSelesai($asep, $pardi, '2026-08-14', 100, 80, 20);
+        $this->postJson("/api/v1/penggajian/{$asep->id}/bayar", ['tanggal' => '2026-08-14'])->assertOk();
+
+        // Sabtu, setelah gaji dibayar: tambah 59.000 lagi.
+        $this->sesiSelesai($asep, $pardi, '2026-08-15', 100, 80, 20);
+
+        $baris = $this->barisGaji($asep);
+        $this->assertFalse($baris['dibayar'], 'Ada kekurangan, jadi belum lunas.');
+        $this->assertTrue($baris['adaPerubahanSetelahDibayar']);
+        $this->assertEqualsWithDelta(118_000.0, $baris['total'], 0.01);
+        $this->assertEqualsWithDelta(59_000.0, $baris['sudahDibayarkan'], 0.01);
+        $this->assertEqualsWithDelta(59_000.0, $baris['kurangBayar'], 0.01);
+        $this->assertEquals(2, $baris['hariKerja']);
+
+        $ringkasan = $this->getJson('/api/v1/penggajian?tanggal=2026-08-13')->json('data.ringkasan');
+        $this->assertEqualsWithDelta(59_000.0, $ringkasan['belumDibayar'] - $this->belumDibayarSelain($asep), 0.01);
+
+        // Bayar kekurangan.
+        $this->postJson("/api/v1/penggajian/{$asep->id}/bayar", ['tanggal' => '2026-08-15'])->assertOk();
+
+        $baris = $this->barisGaji($asep);
+        $this->assertTrue($baris['dibayar']);
+        $this->assertEqualsWithDelta(0.0, $baris['kurangBayar'], 0.01);
+        $this->assertEqualsWithDelta(118_000.0, $baris['sudahDibayarkan'], 0.01);
+
+        $gaji = GajiMingguan::query()->where('karyawan_id', $asep->id)->sole();
+        $this->assertEqualsWithDelta(118_000.0, (float) $gaji->total, 0.01);
+        $this->assertSame(2, (int) $gaji->hari_kerja);
+        $this->assertSame('2026-08-16', $gaji->periode_minggu->toDateString());
+
+        // Jejak audit mencatat nominal susulannya saja.
+        $log = \App\Models\AuditLog::query()->where('aksi', 'gaji.bayar_susulan')->sole();
+        $this->assertEqualsWithDelta(59_000.0, $log->data['dibayarkan_kali_ini'], 0.01);
+    }
+
+    public function test_bayar_ulang_tanpa_kekurangan_tidak_mengubah_apa_pun(): void
+    {
+        $this->masukSebagai();
+        $asep = $this->karyawan('Asep');
+        $pardi = $this->karyawan('Pardi');
+        $this->sesiSelesai($asep, $pardi, '2026-08-14', 100, 80, 20);
+
+        $this->postJson("/api/v1/penggajian/{$asep->id}/bayar", ['tanggal' => '2026-08-14'])->assertOk();
+        $this->postJson("/api/v1/penggajian/{$asep->id}/bayar", ['tanggal' => '2026-08-14'])->assertOk();
+
+        $this->assertSame(1, GajiMingguan::query()->count());
+        $this->assertSame(0, \App\Models\AuditLog::query()->where('aksi', 'gaji.bayar_susulan')->count());
+    }
+
+    public function test_bayar_semua_ikut_melunasi_kekurangan(): void
+    {
+        $this->masukSebagai();
+        $asep = $this->karyawan('Asep');
+        $pardi = $this->karyawan('Pardi');
+
+        $this->sesiSelesai($asep, $pardi, '2026-08-14', 100, 80, 20);
+        $this->postJson('/api/v1/penggajian/bayar-semua', ['tanggal' => '2026-08-14'])->assertOk();
+
+        $this->sesiSelesai($asep, $pardi, '2026-08-16', 100, 80, 20); // Minggu
+        $this->postJson('/api/v1/penggajian/bayar-semua', ['tanggal' => '2026-08-16'])->assertOk();
+
+        $ringkasan = $this->getJson('/api/v1/penggajian?tanggal=2026-08-16')->json('data.ringkasan');
+        $this->assertEqualsWithDelta(0.0, $ringkasan['belumDibayar'], 0.01);
+        $this->assertEqualsWithDelta($ringkasan['totalGaji'], $ringkasan['sudahDibayar'], 0.01);
     }
 
     /** Tarif yang dipakai adalah tarif pada tanggal produksi, bukan tarif terbaru. */
@@ -142,7 +234,7 @@ class PenggajianTest extends TestCase
             ->assertOk()
             ->assertJsonPath('data.status', 'Sudah Dibayar')
             ->assertJsonPath('data.periodeSenin', '2026-08-10')
-            ->assertJsonPath('data.periodeJumat', '2026-08-14');
+            ->assertJsonPath('data.periodeMinggu', '2026-08-16');
 
         // 40 kg × 1.150 + 10 kg × 800 + 1 hari × 5.000
         $snapshot = GajiMingguan::query()->where('karyawan_id', $asep->id)->firstOrFail();
@@ -191,7 +283,7 @@ class PenggajianTest extends TestCase
             ->assertOk()
             ->assertJsonStructure([
                 'data' => [
-                    'periode' => ['senin', 'jumat', 'label'],
+                    'periode' => ['senin', 'minggu', 'label'],
                     'tarif' => ['kristal', 'brondol', 'uangMakan'],
                     'baris' => [
                         'karyawanId', 'nama', 'kgKristal', 'kgBrondol', 'hariKerja',
@@ -248,5 +340,12 @@ class PenggajianTest extends TestCase
         $this->assertNotNull($baris, 'Baris gaji karyawan tidak ditemukan.');
 
         return $baris;
+    }
+
+    private function belumDibayarSelain(Karyawan $karyawan): float
+    {
+        return (float) collect($this->getJson('/api/v1/penggajian?tanggal=2026-08-13')->json('data.baris'))
+            ->reject(fn (array $b): bool => $b['karyawanId'] === (string) $karyawan->id)
+            ->sum(fn (array $b): float => (float) $b['kurangBayar']);
     }
 }
